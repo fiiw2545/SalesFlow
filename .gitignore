@@ -28,3 +28,15 @@ Thumbs.db
 
 # Database Backups
 backups/
+
+# Node.js
+node_modules/
+dist/
+.vite/
+
+# Backend Virtual Environment
+backend/venv/
+
+# Python Cache
+**/__pycache__/
+**/*.py[cod]
