@@ -18,6 +18,10 @@ from app.modules.auth.schemas import (
     LoginResponse,
     LogoutResponse,
     RefreshResponse,
+    UpdateProfileRequest,
+    ProfileUpdateResponse,
+    ChangePasswordRequest,
+    ChangePasswordResponse,
 )
 
 from app.modules.auth.service import (
@@ -25,6 +29,8 @@ from app.modules.auth.service import (
     login_user,
     create_login_tokens,
     refresh_user_session,
+    update_user_profile,
+    change_user_password,
 )
 
 from app.core.config import (
@@ -172,6 +178,73 @@ async def get_me_id(
     return {
         "user_id": user_id,
         "message": "Current user ID retrieved successfully"
+    }
+
+@router.patch(
+    "/me",
+    response_model=ProfileUpdateResponse
+)
+async def update_me(
+    data: UpdateProfileRequest,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSurreal = Depends(get_db)
+):
+    updated_user = await update_user_profile(
+        db=db,
+        user_id=str(current_user["id"]),
+        name=data.name
+    )
+
+    if not updated_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+
+    return {
+        "id": str(updated_user["id"]),
+        "name": updated_user["name"],
+        "email": updated_user["email"],
+        "message": "Profile updated successfully"
+    }
+
+
+@router.patch(
+    "/change-password",
+    response_model=ChangePasswordResponse
+)
+async def change_password(
+    data: ChangePasswordRequest,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSurreal = Depends(get_db)
+):
+    result = await change_user_password(
+        db=db,
+        user_id=str(current_user["id"]),
+        current_password=data.current_password,
+        new_password=data.new_password
+    )
+
+    if result == "user_not_found":
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+
+    if result == "invalid_current_password":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Current password is incorrect"
+        )
+
+    if result == "same_password":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="New password must be different from current password"
+        )
+
+    return {
+        "message": "Password changed successfully"
     }
 
 

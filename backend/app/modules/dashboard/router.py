@@ -1,3 +1,4 @@
+
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -38,15 +39,22 @@ router = APIRouter(
     response_model=DashboardSummaryResponse,
 )
 async def dashboard_summary(
+    start_date: datetime | None = Query(default=None),
+    end_date: datetime | None = Query(default=None),
     db: AsyncSurreal = Depends(get_db),
     current_user=Depends(get_current_user),
     organization_id: str = Depends(get_current_organization_id),
     membership=Depends(get_current_membership),
 ):
-    return await get_dashboard_summary(
-        db=db,
-        organization_id=organization_id,
-    )
+    try:
+        return await get_dashboard_summary(
+            db=db,
+            organization_id=organization_id,
+            start_date=start_date,
+            end_date=end_date,
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error))
 
 
 @router.get(
@@ -54,15 +62,22 @@ async def dashboard_summary(
     response_model=DealsByStatusResponse,
 )
 async def deals_by_status(
+    start_date: datetime | None = Query(default=None),
+    end_date: datetime | None = Query(default=None),
     db: AsyncSurreal = Depends(get_db),
     current_user=Depends(get_current_user),
     organization_id: str = Depends(get_current_organization_id),
     membership=Depends(get_current_membership),
 ):
-    return await get_deals_status_report(
-        db=db,
-        organization_id=organization_id,
-    )
+    try:
+        return await get_deals_status_report(
+            db=db,
+            organization_id=organization_id,
+            start_date=start_date,
+            end_date=end_date,
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error))
 
 
 @router.get(
@@ -70,15 +85,22 @@ async def deals_by_status(
     response_model=DealsByStageResponse,
 )
 async def deals_by_stage(
+    start_date: datetime | None = Query(default=None),
+    end_date: datetime | None = Query(default=None),
     db: AsyncSurreal = Depends(get_db),
     current_user=Depends(get_current_user),
     organization_id: str = Depends(get_current_organization_id),
     membership=Depends(get_current_membership),
 ):
-    return await get_deals_stage_report(
-        db=db,
-        organization_id=organization_id,
-    )
+    try:
+        return await get_deals_stage_report(
+            db=db,
+            organization_id=organization_id,
+            start_date=start_date,
+            end_date=end_date,
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error))
 
 
 @router.get(
@@ -101,10 +123,7 @@ async def deals_report(
             end_date=end_date,
         )
     except ValueError as error:
-        raise HTTPException(
-            status_code=422,
-            detail=str(error),
-        )
+        raise HTTPException(status_code=422, detail=str(error))
 
 
 @router.get(

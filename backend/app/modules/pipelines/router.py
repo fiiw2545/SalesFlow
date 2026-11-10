@@ -1,5 +1,5 @@
 
-from fastapi import APIRouter, Depends, status, HTTPException
+from fastapi import APIRouter, Depends, status, HTTPException, Query
 from surrealdb import AsyncSurreal
 from app.database.dependencies import get_db
 from app.common.dependencies import (
@@ -13,6 +13,7 @@ from app.modules.pipelines.schemas import (
     PipelineCreate,
     PipelineUpdate,
     PipelineResponse,
+    PipelineListResponse,
 )
 from app.modules.pipelines.service import (
     add_pipeline,
@@ -65,9 +66,11 @@ async def create_pipeline_endpoint(
 @router.get(
     "/",
     status_code=status.HTTP_200_OK,
-    response_model=list[PipelineResponse],
+    response_model=PipelineListResponse,
 )
 async def get_pipelines_endpoint(
+    page: int = Query(default=1, ge=1),
+    limit: int = Query(default=10, ge=1, le=100),
     db: AsyncSurreal = Depends(get_db),
     current_user=Depends(get_current_user),
     organization_id: str = Depends(get_current_organization_id),
@@ -76,6 +79,8 @@ async def get_pipelines_endpoint(
     return await list_pipelines(
         db=db,
         organization_id=organization_id,
+        page=page,
+        limit=limit,
     )
 
 

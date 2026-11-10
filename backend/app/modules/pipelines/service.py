@@ -6,6 +6,7 @@ from surrealdb import AsyncSurreal
 
 from app.modules.pipelines.repository import (
     get_pipelines,
+    count_pipelines,
     get_pipeline_by_id,
     pipeline_name_exists,
     clear_other_default_pipelines,
@@ -19,11 +20,28 @@ from app.modules.pipelines.repository import (
 async def list_pipelines(
     db: AsyncSurreal,
     organization_id: str,
+    page: int = 1,
+    limit: int = 10,
 ):
-    return await get_pipelines(
+    items = await get_pipelines(
+        db=db,
+        organization_id=organization_id,
+        page=page,
+        limit=limit,
+    )
+
+    total = await count_pipelines(
         db=db,
         organization_id=organization_id,
     )
+
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "limit": limit,
+        "total_pages": (total + limit - 1) // limit,
+    }
 
 
 async def retrieve_pipeline(

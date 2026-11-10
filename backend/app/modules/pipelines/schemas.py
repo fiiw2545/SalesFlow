@@ -28,3 +28,11 @@ class PipelineResponse(BaseModel):
     is_default: bool
     created_at: datetime
     updated_at: datetime | None = None
+
+
+class PipelineListResponse(BaseModel):
+    items: list[PipelineResponse]
+    total: int
+    page: int
+    limit: int
+    total_pages: int

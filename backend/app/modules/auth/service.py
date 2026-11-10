@@ -224,3 +224,67 @@ async def get_user_membership(
         return None
 
     return result[0]
+
+async def update_user_profile(
+    db: AsyncSurreal,
+    user_id: str,
+    name: str
+):
+    await db.query(
+        """
+        UPDATE type::record('users', $id)
+        SET name = $name
+        """,
+        {
+            "id": user_id.split(":", 1)[1],
+            "name": name
+        }
+    )
+
+    return await get_user_by_id(
+        db=db,
+        user_id=user_id
+    )
+
+
+async def change_user_password(
+    db: AsyncSurreal,
+    user_id: str,
+    current_password: str,
+    new_password: str
+) -> str:
+
+    user = await get_user_by_id(
+        db=db,
+        user_id=user_id
+    )
+
+    if not user:
+        return "user_not_found"
+
+    if not verify_password(
+        current_password,
+        user["password_hash"]
+    ):
+        return "invalid_current_password"
+
+    if verify_password(
+        new_password,
+        user["password_hash"]
+    ):
+        return "same_password"
+
+    hashed_password = hash_password(new_password)
+
+    await db.query(
+        """
+        UPDATE type::record('users', $id)
+        SET password_hash = $password_hash
+        """,
+        {
+            "id": user_id.split(":", 1)[1],
+            "password_hash": hashed_password
+        }
+    )
+
+    return "success"

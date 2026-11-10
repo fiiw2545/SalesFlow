@@ -1,0 +1,40 @@
+:root {
+  /* Typography */
+  --font-size-page-title: 1.5rem;
+  --font-size-section-title: 1rem;
+  --font-size-body: 0.875rem;
+  --font-size-label: 0.875rem;
+  --font-size-caption: 0.75rem;
+
+  --line-height-title: 2rem;
+  --line-height-body: 1.25rem;
+
+  /* Font Weight */
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+
+  /* Component Sizes */
+  --control-height: 2.5rem;
+  --button-height-sm: 2rem;
+  --button-height-lg: 2.75rem;
+
+  /* Spacing */
+  --page-spacing: 1.5rem;
+  --section-spacing: 1.5rem;
+  --form-spacing: 1rem;
+
+  /* Border Radius */
+  --radius-control: 0.5rem;
+  --radius-card: 0.75rem;
+  --radius-modal: 1rem;
+
+  /* Colors */
+  --color-primary: #2563eb;
+  --color-primary-hover: #1d4ed8;
+  --color-background: #f8fafc;
+  --color-surface: #ffffff;
+  --color-text-primary: #0f172a;
+  --color-text-secondary: #64748b;
+  --color-border: #e2e8f0;
+}

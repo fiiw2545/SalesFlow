@@ -37,3 +37,10 @@ class TagAssignmentResponse(BaseModel):
     organization_id: RecordID
     tag_id: RecordID
     created_at: datetime
+
+class TagListResponse(BaseModel):
+    items: list[TagResponse]
+    total: int
+    page: int
+    limit: int
+    total_pages: int

@@ -37,6 +37,10 @@ class CompanyResponse(BaseModel):
 
 class CompanyListResponse(BaseModel):
     items: list[CompanyResponse]
+    total: int
+    page: int
+    limit: int
+    total_pages: int
 
 
 class CompanyDeleteResponse(BaseModel):

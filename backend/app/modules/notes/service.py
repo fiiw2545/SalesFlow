@@ -4,6 +4,7 @@ from surrealdb import AsyncSurreal
 
 from app.modules.notes.repository import (
     get_notes,
+    count_notes,
     get_note_by_id,
     create_note,
     update_note,
@@ -57,11 +58,28 @@ async def validate_related_records(
 async def list_notes(
     db: AsyncSurreal,
     organization_id: str,
+    page: int = 1,
+    limit: int = 10,
 ):
-    return await get_notes(
+    items = await get_notes(
+        db=db,
+        organization_id=organization_id,
+        page=page,
+        limit=limit,
+    )
+
+    total = await count_notes(
         db=db,
         organization_id=organization_id,
     )
+
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "limit": limit,
+        "total_pages": (total + limit - 1) // limit,
+    }
 
 
 async def retrieve_note(

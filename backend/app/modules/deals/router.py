@@ -1,7 +1,7 @@
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from surrealdb import AsyncSurreal
-
+from app.modules.deals.schemas import DealListResponse
 from app.database.dependencies import get_db
 
 from app.security.dependencies import (
@@ -33,9 +33,12 @@ router = APIRouter(
 
 @router.get(
     "/",
-    response_model=list[DealResponse],
+    response_model=DealListResponse,
 )
 async def get_all_deals(
+    page: int = Query(1, ge=1),
+    limit: int = Query(10, ge=1, le=100),
+    search: str | None = Query(default=None, max_length=100),
     db: AsyncSurreal = Depends(get_db),
     current_user=Depends(get_current_user),
     organization_id: str = Depends(get_current_organization_id),
@@ -44,6 +47,9 @@ async def get_all_deals(
     return await list_deals(
         db=db,
         organization_id=organization_id,
+        page=page,
+        limit=limit,
+        search=search,
     )
 
 
@@ -123,6 +129,7 @@ async def update_existing_deal(
         db=db,
         deal_id=deal_id,
         organization_id=organization_id,
+        actor_id=str(current_user["id"]),
         title=payload.title,
         value=payload.value,
         currency=payload.currency,

@@ -6,6 +6,7 @@ from surrealdb import AsyncSurreal
 from app.modules.pipelines.repository import get_pipeline_by_id
 from app.modules.pipelines.stages.repository import (
     get_stages,
+    count_stages,
     get_stage_by_id,
     stage_name_exists,
     stage_position_exists,
@@ -76,6 +77,8 @@ async def list_stages(
     db: AsyncSurreal,
     pipeline_id: str,
     organization_id: str,
+    page: int = 1,
+    limit: int = 10,
 ):
     pipeline = await ensure_pipeline_access(
         db=db,
@@ -86,11 +89,25 @@ async def list_stages(
     if not pipeline:
         return None
 
-    return await get_stages(
+    items = await get_stages(
+        db=db,
+        pipeline_id=pipeline_id,
+        page=page,
+        limit=limit,
+    )
+
+    total = await count_stages(
         db=db,
         pipeline_id=pipeline_id,
     )
 
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "limit": limit,
+        "total_pages": (total + limit - 1) // limit,
+    }
 
 async def retrieve_stage(
     db: AsyncSurreal,
@@ -208,34 +225,38 @@ async def edit_stage(
     return result[0]
 
 
+
 async def remove_stage(
     db: AsyncSurreal,
     stage_id: str,
     pipeline_id: str,
     organization_id: str,
 ):
-    existing = await ensure_pipeline_access(
-        db,
-        pipeline_id,
-        organization_id,
+    # 1. ตรวจสอบว่า Pipeline เป็นของ Organization ปัจจุบัน
+    pipeline = await ensure_pipeline_access(
+        db=db,
+        pipeline_id=pipeline_id,
+        organization_id=organization_id,
     )
 
+    if not pipeline:
+        return None
+
+    # 2. ตรวจสอบว่า Stage อยู่ใน Pipeline นี้จริง
     stage = await get_stage_by_id(
-    db,
-    stage_id,
-    pipeline_id,
-)
+        db=db,
+        stage_id=stage_id,
+        pipeline_id=pipeline_id,
+    )
 
     if not stage:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Stage not found",
-        )
+        return None
 
+    # 3. ตรวจสอบว่า Stage ถูกใช้งานโดย Deals หรือไม่
     deals = await get_deals_by_stage_id(
-        db,
-        stage_id,
-        organization_id,
+        db=db,
+        stage_id=stage_id,
+        organization_id=organization_id,
     )
 
     if deals:
@@ -244,10 +265,16 @@ async def remove_stage(
             detail="Cannot delete stage because it is used by deals",
         )
 
-    await delete_stage(
-    db,
-    stage_id,
-    pipeline_id,
-)
+    # 4. ลบ Stage
+    result = await delete_stage(
+        db=db,
+        stage_id=stage_id,
+        pipeline_id=pipeline_id,
+    )
 
-    return {"message": "Stage deleted successfully"}
+    if not result:
+        return None
+
+    return {
+        "message": "Stage deleted successfully"
+    }

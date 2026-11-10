@@ -29,3 +29,11 @@ class StageResponse(BaseModel):
     probability: int
     created_at: datetime
     updated_at: datetime | None = None
+
+
+class StageListResponse(BaseModel):
+    items: list[StageResponse]
+    total: int
+    page: int
+    limit: int
+    total_pages: int

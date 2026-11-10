@@ -2,6 +2,7 @@ from surrealdb import AsyncSurreal
 
 from app.modules.tags.repository import (
     get_tag_usage,
+    count_tags,
     get_tags,
     get_tag_by_id,
     create_tag,
@@ -27,11 +28,28 @@ from app.modules.tags.repository import (
 async def list_tags(
     db: AsyncSurreal,
     organization_id: str,
+    page: int = 1,
+    limit: int = 10,
 ):
-    return await get_tags(
+    items = await get_tags(
+        db=db,
+        organization_id=organization_id,
+        page=page,
+        limit=limit,
+    )
+
+    total = await count_tags(
         db=db,
         organization_id=organization_id,
     )
+
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "limit": limit,
+        "total_pages": (total + limit - 1) // limit,
+    }
 
 
 async def retrieve_tag(

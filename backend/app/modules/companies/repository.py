@@ -75,29 +75,94 @@ def serialize_record_ids(data):
 async def get_companies(
     db: AsyncSurreal,
     organization_id: str,
+    page: int = 1,
+    limit: int = 10,
+    search: str | None = None,
 ):
     organization_record = to_record_id(
         "organizations",
         organization_id,
     )
 
-    query = """
+    offset = (page - 1) * limit
+
+    search_filter = ""
+    params = {
+        "organization_id": organization_record,
+        "limit": limit,
+        "offset": offset,
+    }
+
+    if search:
+        search_filter = """
+            AND (
+                string::contains(string::lowercase(name ?? ''), $search)
+                OR string::contains(string::lowercase(industry ?? ''), $search)
+                OR string::contains(string::lowercase(phone ?? ''), $search)
+                OR string::contains(string::lowercase(address ?? ''), $search)
+                OR string::contains(string::lowercase(website ?? ''), $search)
+            )
+        """
+        params["search"] = search
+
+    query = f"""
         SELECT *
         FROM companies
         WHERE organization_id = $organization_id
-        ORDER BY created_at DESC;
+        {search_filter}
+        ORDER BY created_at DESC
+        LIMIT $limit
+        START $offset;
     """
 
-    result = await db.query(
-        query,
-        {
-            "organization_id": organization_record,
-        },
-    )
-
+    result = await db.query(query, params)
     rows = extract_rows(result)
 
     return serialize_record_ids(rows)
+
+
+async def count_companies(
+    db: AsyncSurreal,
+    organization_id: str,
+    search: str | None = None,
+):
+    organization_record = to_record_id(
+        "organizations",
+        organization_id,
+    )
+
+    search_filter = ""
+    params = {
+        "organization_id": organization_record,
+    }
+
+    if search:
+        search_filter = """
+            AND (
+                string::contains(string::lowercase(name ?? ''), $search)
+                OR string::contains(string::lowercase(industry ?? ''), $search)
+                OR string::contains(string::lowercase(phone ?? ''), $search)
+                OR string::contains(string::lowercase(address ?? ''), $search)
+                OR string::contains(string::lowercase(website ?? ''), $search)
+            )
+        """
+        params["search"] = search
+
+    query = f"""
+        SELECT count() AS total
+        FROM companies
+        WHERE organization_id = $organization_id
+        {search_filter}
+        GROUP ALL;
+    """
+
+    result = await db.query(query, params)
+    rows = extract_rows(result)
+
+    if not rows:
+        return 0
+
+    return rows[0].get("total", 0)
 
 
 async def get_company_by_id(

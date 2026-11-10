@@ -63,12 +63,35 @@ async def validate_company(
 
 async def get_contacts(
     db: AsyncSurreal,
-    organization_id: str
+    organization_id: str,
+    page: int = 1,
+    limit: int = 10,
+    search: str | None = None,
 ):
-    return await repository.get_contacts(
+    search = search.strip().lower() if search else None
+    search = search or None
+
+    contacts = await repository.get_contacts(
         db,
-        organization_id
+        organization_id,
+        page,
+        limit,
+        search,
     )
+
+    total = await repository.count_contacts(
+        db,
+        organization_id,
+        search,
+    )
+
+    return {
+        "data": contacts,
+        "total": total,
+        "page": page,
+        "limit": limit,
+        "total_pages": (total + limit - 1) // limit
+    }
 
 
 async def get_contact_by_id(

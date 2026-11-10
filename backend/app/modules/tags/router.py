@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from surrealdb import AsyncSurreal
 
 from app.database.dependencies import get_db
@@ -14,6 +14,7 @@ from app.modules.tags.schemas import (
     TagResponse,
     TagAssignmentCreate,
     TagAssignmentResponse,
+    TagListResponse,
 )
 
 from app.modules.tags.service import (
@@ -51,12 +52,10 @@ def raise_assignment_error(result):
         )
 
 
-# -------------------------
-# Tag CRUD
-# -------------------------
-
-@router.get("/", response_model=list[TagResponse])
+@router.get("/", response_model=TagListResponse)
 async def get_all_tags(
+    page: int = Query(default=1, ge=1),
+    limit: int = Query(default=10, ge=1, le=100),
     db: AsyncSurreal = Depends(get_db),
     current_user=Depends(get_current_user),
     organization_id: str = Depends(get_current_organization_id),
@@ -65,6 +64,8 @@ async def get_all_tags(
     return await list_tags(
         db=db,
         organization_id=organization_id,
+        page=page,
+        limit=limit,
     )
 
 

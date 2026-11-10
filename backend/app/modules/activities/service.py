@@ -1,7 +1,8 @@
 from surrealdb import AsyncSurreal
-
+from app.modules.notifications.service import send_notification
 from app.modules.activities.repository import (
     get_activities,
+    count_activities,
     get_activity_by_id,
     create_activity,
     update_activity,
@@ -10,6 +11,43 @@ from app.modules.activities.repository import (
     get_contact_by_id,
 )
 
+def extract_rows(result):
+    if not isinstance(result, list):
+        return []
+
+    rows = []
+
+    for item in result:
+        if not isinstance(item, dict):
+            continue
+
+        if "id" in item:
+            rows.append(item)
+            continue
+
+        nested = item.get("result")
+
+        if isinstance(nested, list):
+            rows.extend(
+                row for row in nested
+                if isinstance(row, dict)
+            )
+        elif isinstance(nested, dict):
+            rows.append(nested)
+
+    return rows
+
+
+def normalize_record_id(record_id) -> str | None:
+    if record_id is None:
+        return None
+
+    record_id = str(record_id)
+
+    if ":" in record_id:
+        return record_id.split(":", 1)[1]
+
+    return record_id
 
 async def validate_related_records(
     db: AsyncSurreal,
@@ -43,11 +81,28 @@ async def validate_related_records(
 async def list_activities(
     db: AsyncSurreal,
     organization_id: str,
+    page: int = 1,
+    limit: int = 10,
 ):
-    return await get_activities(
+    items = await get_activities(
+        db=db,
+        organization_id=organization_id,
+        page=page,
+        limit=limit,
+    )
+
+    total = await count_activities(
         db=db,
         organization_id=organization_id,
     )
+
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "limit": limit,
+        "total_pages": (total + limit - 1) // limit,
+    }
 
 
 async def retrieve_activity(
@@ -102,10 +157,50 @@ async def add_activity(
         data=data,
     )
 
-    if not result:
+    rows = extract_rows(result)
+
+    if not rows:
         return None
 
-    return result[0]
+    created_activity = rows[0]
+
+    # Notify Deal Owner when Activity is linked to a Deal
+    if deal_id:
+        deal_result = await get_deal_by_id(
+            db=db,
+            deal_id=deal_id,
+            organization_id=organization_id,
+        )
+
+        deal_rows = extract_rows(deal_result)
+
+        if deal_rows:
+            deal = deal_rows[0]
+            owner_id = deal.get("owner_id")
+
+            if (
+                owner_id
+                and normalize_record_id(owner_id)
+                != normalize_record_id(performed_by)
+            ):
+                activity_id = created_activity.get("id")
+
+                if activity_id:
+                    await send_notification(
+                        db=db,
+                        user_id=str(owner_id),
+                        organization_id=organization_id,
+                        notification_type="ACTIVITY_CREATED",
+                        title="มีกิจกรรมใหม่",
+                        message=(
+                            f'กิจกรรม "{subject}" '
+                            f'ถูกเพิ่มลงในดีล "{deal.get("title", "")}" แล้ว'
+                        ),
+                        entity_type="activity",
+                        entity_id=str(activity_id),
+                    )
+
+    return created_activity
 
 
 async def edit_activity(

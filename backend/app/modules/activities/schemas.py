@@ -32,3 +32,10 @@ class ActivityResponse(BaseModel):
     organization_id: RecordID
     performed_by: RecordID
     created_at: datetime
+
+class ActivityListResponse(BaseModel):
+    items: list[ActivityResponse]
+    total: int
+    page: int
+    limit: int
+    total_pages: int

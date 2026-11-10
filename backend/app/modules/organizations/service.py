@@ -47,6 +47,8 @@ async def create_organization(
 async def list_organizations(
     db: AsyncSurreal,
     current_user,
+    page: int = 1,
+    limit: int = 10,
 ):
     user_id = get_user_id(current_user)
 
@@ -55,7 +57,18 @@ async def list_organizations(
         user_id=user_id,
     )
 
-    return {"items": organizations}
+    total = len(organizations)
+    offset = (page - 1) * limit
+
+    items = organizations[offset:offset + limit]
+
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "limit": limit,
+        "total_pages": (total + limit - 1) // limit,
+    }
 
 
 async def get_organization(

@@ -3,6 +3,7 @@ from surrealdb import AsyncSurreal
 
 from app.modules.companies.repository import (
     get_companies,
+    count_companies,
     get_company_by_id,
     get_company_by_name,
     create_company,
@@ -16,14 +17,33 @@ from app.modules.companies.repository import (
 async def list_companies(
     db: AsyncSurreal,
     organization_id: str,
+    page: int = 1,
+    limit: int = 10,
+    search: str | None = None,
 ):
+    search = search.strip().lower() if search else None
+    search = search or None
+
     items = await get_companies(
         db=db,
         organization_id=organization_id,
+        page=page,
+        limit=limit,
+        search=search,
+    )
+
+    total = await count_companies(
+        db=db,
+        organization_id=organization_id,
+        search=search,
     )
 
     return {
         "items": items,
+        "total": total,
+        "page": page,
+        "limit": limit,
+        "total_pages": (total + limit - 1) // limit,
     }
 
 

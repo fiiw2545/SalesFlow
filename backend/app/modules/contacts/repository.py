@@ -4,22 +4,46 @@ from surrealdb import RecordID
 
 async def get_contacts(
     db: AsyncSurreal,
-    organization_id: str
+    organization_id: str,
+    page: int = 1,
+    limit: int = 10,
+    search: str | None = None,
 ):
     organization_record_id = RecordID(
         "organizations",
         organization_id.replace("organizations:", "")
     )
 
-    return await db.query(
+    offset = (page - 1) * limit
+
+    search_filter = ""
+    params = {
+        "organization_id": organization_record_id,
+        "limit": limit,
+        "offset": offset,
+    }
+
+    if search:
+        search_filter = """
+            AND (
+                string::contains(string::lowercase(name ?? ''), $search)
+                OR string::contains(string::lowercase(email ?? ''), $search)
+                OR string::contains(string::lowercase(phone ?? ''), $search)
+                OR string::contains(string::lowercase(position ?? ''), $search)
+            )
         """
+        params["search"] = search
+
+    query = f"""
         SELECT * FROM contacts
         WHERE organization_id = $organization_id
-        """,
-        {
-            "organization_id": organization_record_id
-        }
-    )
+        {search_filter}
+        ORDER BY created_at DESC
+        LIMIT $limit
+        START $offset
+    """
+
+    return await db.query(query, params)
 
 
 async def get_contact_by_id(
@@ -148,3 +172,60 @@ async def delete_contact(
             "organization_id": organization_record_id
         }
     )
+
+async def count_contacts(
+    db: AsyncSurreal,
+    organization_id: str,
+    search: str | None = None,
+):
+    organization_record_id = RecordID(
+        "organizations",
+        organization_id.replace("organizations:", "")
+    )
+
+    search_filter = ""
+    params = {
+        "organization_id": organization_record_id
+    }
+
+    if search:
+        search_filter = """
+            AND (
+                string::contains(string::lowercase(name ?? ''), $search)
+                OR string::contains(string::lowercase(email ?? ''), $search)
+                OR string::contains(string::lowercase(phone ?? ''), $search)
+                OR string::contains(string::lowercase(position ?? ''), $search)
+            )
+        """
+        params["search"] = search
+
+    result = await db.query(
+        f"""
+        SELECT count() AS total
+        FROM contacts
+        WHERE organization_id = $organization_id
+        {search_filter}
+        GROUP ALL
+        """,
+        params
+    )
+
+    if not isinstance(result, list):
+        return 0
+
+    for item in result:
+        if not isinstance(item, dict):
+            continue
+
+        if "total" in item:
+            return item["total"]
+
+        rows = item.get("result")
+
+        if isinstance(rows, list) and rows:
+            return rows[0].get("total", 0)
+
+        if isinstance(rows, dict):
+            return rows.get("total", 0)
+
+    return 0

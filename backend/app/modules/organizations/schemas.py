@@ -37,6 +37,10 @@ class OrganizationListItem(OrganizationResponse):
 
 class OrganizationListResponse(BaseModel):
     items: list[OrganizationListItem]
+    total: int
+    page: int
+    limit: int
+    total_pages: int
 
 
 class OrganizationCreateResponse(BaseModel):

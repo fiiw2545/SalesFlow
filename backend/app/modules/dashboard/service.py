@@ -1,4 +1,3 @@
-from datetime import datetime, timezone
 
 from surrealdb import AsyncSurreal
 
@@ -13,24 +12,44 @@ from app.modules.dashboard.repository import (
 )
 
 
+def validate_date_range(start_date=None, end_date=None):
+    if start_date and end_date and start_date > end_date:
+        raise ValueError(
+            "start_date must be before or equal to end_date"
+        )
+
+
 def get_count(result):
     if not result:
         return 0
+
     return int(result[0].get("count", 0) or 0)
 
 
 def get_number(value):
     if value is None:
         return 0.0
+
     return float(value)
 
 
 async def get_dashboard_summary(
     db: AsyncSurreal,
     organization_id,
+    start_date=None,
+    end_date=None,
 ):
-    deal_result = await get_deal_summary(db, organization_id)
-    status_result = await get_deals_by_status(db, organization_id)
+    validate_date_range(start_date, end_date)
+
+    deal_result = await get_deal_summary(
+        db, organization_id, start_date, end_date
+    )
+
+    status_result = await get_deals_by_status(
+        db, organization_id, start_date, end_date
+    )
+
+    # Tasks และ Activities ยังคงเป็นยอดทั้งหมด
     task_result = await get_task_summary(db, organization_id)
     overdue_result = await get_overdue_task_count(db, organization_id)
     activity_result = await get_activity_count(db, organization_id)
@@ -76,8 +95,17 @@ async def get_dashboard_summary(
 async def get_deals_status_report(
     db: AsyncSurreal,
     organization_id,
+    start_date=None,
+    end_date=None,
 ):
-    result = await get_deals_by_status(db, organization_id)
+    validate_date_range(start_date, end_date)
+
+    result = await get_deals_by_status(
+        db,
+        organization_id,
+        start_date,
+        end_date,
+    )
 
     return {
         "items": [
@@ -94,20 +122,44 @@ async def get_deals_status_report(
 async def get_deals_stage_report(
     db: AsyncSurreal,
     organization_id,
+    start_date=None,
+    end_date=None,
 ):
-    result = await get_deals_by_stage(db, organization_id)
+    validate_date_range(start_date, end_date)
 
-    return {
-        "items": [
-            {
-                "stage_id": str(item.get("stage_id", "")),
-                "stage_name": item.get("stage_name") or "Unknown",
-                "count": int(item.get("count", 0) or 0),
-                "total_value": get_number(item.get("total_value")),
-            }
-            for item in result
-        ]
-    }
+    result = await get_deals_by_stage(
+        db,
+        organization_id,
+        start_date,
+        end_date,
+    )
+
+    items = []
+
+    for item in result:
+        stage_name = item.get("stage_name")
+
+        if isinstance(stage_name, list):
+            stage_name = next(
+                (
+                    name
+                    for name in stage_name
+                    if isinstance(name, str) and name
+                ),
+                "Unknown",
+            )
+
+        if not isinstance(stage_name, str) or not stage_name:
+            stage_name = "Unknown"
+
+        items.append({
+            "stage_id": str(item.get("stage_id", "")),
+            "stage_name": stage_name,
+            "count": int(item.get("count", 0) or 0),
+            "total_value": get_number(item.get("total_value")),
+        })
+
+    return {"items": items}
 
 
 async def get_deals_date_report(
@@ -116,8 +168,7 @@ async def get_deals_date_report(
     start_date=None,
     end_date=None,
 ):
-    if start_date and end_date and start_date > end_date:
-        raise ValueError("start_date must be before or equal to end_date")
+    validate_date_range(start_date, end_date)
 
     result = await get_deals_report(
         db=db,

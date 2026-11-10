@@ -53,3 +53,11 @@ class DealResponse(BaseModel):
     expected_close_date: datetime | None = None
     created_at: datetime
     updated_at: datetime | None = None
+
+
+class DealListResponse(BaseModel):
+    items: list[DealResponse]
+    total: int
+    page: int
+    limit: int
+    total_pages: int

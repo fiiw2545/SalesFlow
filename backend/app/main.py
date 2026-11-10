@@ -1,7 +1,7 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends
 from surrealdb import AsyncSurreal
-
+from fastapi.middleware.cors import CORSMiddleware
 from app.database.connection import connect_db, close_db
 from app.database.dependencies import get_db
 from app.modules.contacts.router import router as contact_router
@@ -16,6 +16,8 @@ from app.modules.dashboard.router import router as dashboard_router
 from app.modules.organizations.router import router as organizations_router
 from app.modules.memberships.router import router as memberships_router
 from app.modules.companies.router import router as companies_router
+from app.modules.search.router import router as search_router
+from app.modules.notifications.router import router as notifications_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -33,6 +35,16 @@ app = FastAPI(
     lifespan=lifespan
 )
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 app.include_router(contact_router)
 app.include_router(auth_router)
 app.include_router(pipeline_router)
@@ -45,6 +57,8 @@ app.include_router(dashboard_router)
 app.include_router(organizations_router)
 app.include_router(memberships_router)
 app.include_router(companies_router)
+app.include_router(search_router)
+app.include_router(notifications_router)
 
 @app.get("/db-version", tags=["Database"])
 async def get_db_version(

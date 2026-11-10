@@ -1,9 +1,9 @@
-
 from fastapi import (
     APIRouter,
     Depends,
     HTTPException,
     status,
+    Query,
 )
 from surrealdb import AsyncSurreal
 
@@ -81,6 +81,8 @@ async def create_organization_endpoint(
     response_model=OrganizationListResponse,
 )
 async def list_organizations_endpoint(
+    page: int = Query(default=1, ge=1),
+    limit: int = Query(default=10, ge=1, le=100),
     db: AsyncSurreal = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
@@ -88,6 +90,8 @@ async def list_organizations_endpoint(
         return await list_organizations(
             db=db,
             current_user=current_user,
+            page=page,
+            limit=limit,
         )
     except Exception as error:
         handle_service_error(error)

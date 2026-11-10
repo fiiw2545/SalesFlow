@@ -1,3 +1,4 @@
+
 from surrealdb import AsyncSurreal, RecordID
 
 
@@ -12,68 +13,19 @@ def to_record_id(table: str, record_id: str) -> RecordID:
 
     return RecordID(table, record_id)
 
-async def get_deal_summary(db: AsyncSurreal, organization_id):
-    organization_id = to_record_id("organizations", organization_id)
-    query = """
-        SELECT
-            count() AS total_deals,
-            math::sum(value) AS total_value
-        FROM deals
-        WHERE organization_id = $organization_id
-        GROUP ALL;
-    """
-    result = await db.query(query, {
-        "organization_id": organization_id,
-    })
-    return result
 
-
-async def get_deals_by_status(db: AsyncSurreal, organization_id):
-    organization_id = to_record_id("organizations", organization_id)
-    query = """
-        SELECT
-            status,
-            count() AS count,
-            math::sum(value) AS total_value
-        FROM deals
-        WHERE organization_id = $organization_id
-        GROUP BY status;
-    """
-    result = await db.query(query, {
-        "organization_id": organization_id,
-    })
-    return result
-
-
-async def get_deals_by_stage(db: AsyncSurreal, organization_id):
-    organization_id = to_record_id("organizations", organization_id)
-    query = """
-        SELECT
-            stage_id,
-            stage_id.name AS stage_name,
-            count() AS count,
-            math::sum(value) AS total_value
-        FROM deals
-        WHERE organization_id = $organization_id
-        GROUP BY stage_id;
-    """
-    result = await db.query(query, {
-        "organization_id": organization_id,
-    })
-    return result
-
-
-async def get_deals_report(
-    db: AsyncSurreal,
+def build_deal_date_filter(
     organization_id,
     start_date=None,
     end_date=None,
 ):
-    organization_id = to_record_id("organizations", organization_id)
     conditions = ["organization_id = $organization_id"]
 
     params = {
-        "organization_id": organization_id,
+        "organization_id": to_record_id(
+            "organizations",
+            organization_id,
+        ),
     }
 
     if start_date is not None:
@@ -84,7 +36,95 @@ async def get_deals_report(
         conditions.append("created_at <= $end_date")
         params["end_date"] = end_date
 
-    where_clause = " AND ".join(conditions)
+    return " AND ".join(conditions), params
+
+
+async def get_deal_summary(
+    db: AsyncSurreal,
+    organization_id,
+    start_date=None,
+    end_date=None,
+):
+    where_clause, params = build_deal_date_filter(
+        organization_id,
+        start_date,
+        end_date,
+    )
+
+    query = f"""
+        SELECT
+            count() AS total_deals,
+            math::sum(value) AS total_value
+        FROM deals
+        WHERE {where_clause}
+        GROUP ALL;
+    """
+
+    return await db.query(query, params)
+
+
+async def get_deals_by_status(
+    db: AsyncSurreal,
+    organization_id,
+    start_date=None,
+    end_date=None,
+):
+    where_clause, params = build_deal_date_filter(
+        organization_id,
+        start_date,
+        end_date,
+    )
+
+    query = f"""
+        SELECT
+            status,
+            count() AS count,
+            math::sum(value) AS total_value
+        FROM deals
+        WHERE {where_clause}
+        GROUP BY status;
+    """
+
+    return await db.query(query, params)
+
+
+async def get_deals_by_stage(
+    db: AsyncSurreal,
+    organization_id,
+    start_date=None,
+    end_date=None,
+):
+    where_clause, params = build_deal_date_filter(
+        organization_id,
+        start_date,
+        end_date,
+    )
+
+    query = f"""
+        SELECT
+            stage_id,
+            stage_id.name AS stage_name,
+            count() AS count,
+            math::sum(value) AS total_value
+        FROM deals
+        WHERE {where_clause}
+        GROUP BY stage_id;
+    """
+
+    return await db.query(query, params)
+
+
+async def get_deals_report(
+    db: AsyncSurreal,
+    organization_id,
+    start_date=None,
+    end_date=None,
+):
+    where_clause, params = build_deal_date_filter(
+        organization_id,
+        start_date,
+        end_date,
+    )
 
     query = f"""
         SELECT
@@ -103,12 +143,12 @@ async def get_deals_report(
         ORDER BY created_at DESC;
     """
 
-    result = await db.query(query, params)
-    return result
+    return await db.query(query, params)
 
 
 async def get_task_summary(db: AsyncSurreal, organization_id):
     organization_id = to_record_id("organizations", organization_id)
+
     query = """
         SELECT
             status,
@@ -117,14 +157,15 @@ async def get_task_summary(db: AsyncSurreal, organization_id):
         WHERE organization_id = $organization_id
         GROUP BY status;
     """
-    result = await db.query(query, {
+
+    return await db.query(query, {
         "organization_id": organization_id,
     })
-    return result
 
 
 async def get_overdue_task_count(db: AsyncSurreal, organization_id):
     organization_id = to_record_id("organizations", organization_id)
+
     query = """
         SELECT count() AS count
         FROM tasks
@@ -135,23 +176,22 @@ async def get_overdue_task_count(db: AsyncSurreal, organization_id):
             AND due_date < time::now()
         GROUP ALL;
     """
-    result = await db.query(query, {
+
+    return await db.query(query, {
         "organization_id": organization_id,
     })
-    return result
 
 
 async def get_activity_count(db: AsyncSurreal, organization_id):
     organization_id = to_record_id("organizations", organization_id)
+
     query = """
         SELECT count() AS count
         FROM activities
         WHERE organization_id = $organization_id
         GROUP ALL;
     """
-    result = await db.query(query, {
+
+    return await db.query(query, {
         "organization_id": organization_id,
     })
-    return result
-
-

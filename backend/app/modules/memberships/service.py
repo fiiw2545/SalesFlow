@@ -5,6 +5,8 @@ from surrealdb import AsyncSurreal
 from app.modules.memberships.repository import (
     get_user,
     get_memberships,
+    get_memberships_paginated,
+    count_memberships,
     get_membership_by_id,
     get_membership_by_user_id,
     create_membership as repo_create_membership,
@@ -24,14 +26,28 @@ def require_admin(current_membership: dict):
 async def get_all_memberships(
     db: AsyncSurreal,
     organization_id: str,
+    page: int = 1,
+    limit: int = 10,
 ):
-    items = await get_memberships(
+    items = await get_memberships_paginated(
+        db=db,
+        organization_id=organization_id,
+        page=page,
+        limit=limit,
+    )
+
+    total = await count_memberships(
         db=db,
         organization_id=organization_id,
     )
 
-    return {"items": items}
-
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "limit": limit,
+        "total_pages": (total + limit - 1) // limit,
+    }
 
 async def get_membership(
     db: AsyncSurreal,

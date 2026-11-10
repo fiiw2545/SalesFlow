@@ -153,10 +153,11 @@ async def get_user_organizations(
     user_record = to_record_id("users", user_id)
 
     query = """
-        SELECT *
-        FROM memberships
-        WHERE user_id = $user_id;
-    """
+    SELECT *
+    FROM memberships
+    WHERE user_id = $user_id
+    ORDER BY joined_at ASC, id ASC;
+"""
 
     result = await db.query(
         query,

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from surrealdb import AsyncSurreal
 
 from app.database.dependencies import get_db
@@ -12,6 +12,7 @@ from app.modules.tasks.schemas import (
     TaskCreate,
     TaskUpdate,
     TaskResponse,
+    TaskListResponse,
 )
 
 from app.modules.tasks.service import (
@@ -29,8 +30,10 @@ router = APIRouter(
 )
 
 
-@router.get("/", response_model=list[TaskResponse])
+@router.get("/", response_model=TaskListResponse)
 async def get_all_tasks(
+    page: int = Query(default=1, ge=1),
+    limit: int = Query(default=10, ge=1, le=100),
     db: AsyncSurreal = Depends(get_db),
     current_user=Depends(get_current_user),
     organization_id: str = Depends(get_current_organization_id),
@@ -39,6 +42,8 @@ async def get_all_tasks(
     return await list_tasks(
         db=db,
         organization_id=organization_id,
+        page=page,
+        limit=limit,
     )
 
 

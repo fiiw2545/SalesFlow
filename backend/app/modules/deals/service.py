@@ -2,11 +2,12 @@
 from datetime import datetime, timezone
 
 from surrealdb import AsyncSurreal
-
+from app.modules.notifications.service import send_notification
 from app.modules.pipelines.repository import get_pipeline_by_id
 
 from app.modules.deals.repository import (
     get_deals,
+    count_deals,
     get_deal_by_id,
     create_deal,
     update_deal,
@@ -121,11 +122,33 @@ async def validate_related_records(
 async def list_deals(
     db: AsyncSurreal,
     organization_id: str,
+    page: int = 1,
+    limit: int = 10,
+    search: str | None = None,
 ):
-    return await get_deals(
+    search = search.strip().lower() if search else None
+
+    items = await get_deals(
         db=db,
         organization_id=organization_id,
+        page=page,
+        limit=limit,
+        search=search,
     )
+
+    total = await count_deals(
+        db=db,
+        organization_id=organization_id,
+        search=search,
+    )
+
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "limit": limit,
+        "total_pages": (total + limit - 1) // limit,
+    }
 
 
 async def retrieve_deal(
@@ -195,6 +218,7 @@ async def edit_deal(
     db: AsyncSurreal,
     deal_id: str,
     organization_id: str,
+    actor_id: str,
     title: str,
     value,
     currency: str,
@@ -245,6 +269,24 @@ async def edit_deal(
 
     if not result:
         return None
+
+    owner_id = existing.get("owner_id")
+
+    if (
+        owner_id
+        and normalize_record_id(owner_id)
+        != normalize_record_id(actor_id)
+    ):
+        await send_notification(
+            db=db,
+            user_id=str(owner_id),
+            organization_id=organization_id,
+            notification_type="DEAL_UPDATED",
+            title="มีการแก้ไขดีล",
+            message=f'ดีล "{existing.get("title", "")}" ได้รับการแก้ไขแล้ว',
+            entity_type="deal",
+            entity_id=deal_id,
+        )
 
     return result[0]
 

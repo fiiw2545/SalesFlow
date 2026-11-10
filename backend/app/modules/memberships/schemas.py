@@ -33,3 +33,10 @@ class MembershipListResponse(BaseModel):
 
 class MembershipDeleteResponse(BaseModel):
     message: str
+
+class MembershipListResponse(BaseModel):
+    items: list[MembershipResponse]
+    total: int
+    page: int
+    limit: int
+    total_pages: int

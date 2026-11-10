@@ -116,6 +116,81 @@ async def get_memberships(
         for row in rows
     ]
 
+async def get_memberships_paginated(
+    db: AsyncSurreal,
+    organization_id: str,
+    page: int = 1,
+    limit: int = 10,
+):
+    organization_record = to_record_id(
+        "organizations",
+        organization_id,
+    )
+
+    offset = (page - 1) * limit
+
+    result = await db.query(
+        """
+        SELECT *
+        FROM memberships
+        WHERE organization_id = $organization_id
+        ORDER BY joined_at ASC, id ASC
+        START $offset;
+        """,
+        {
+            "organization_id": organization_record,
+            "offset": offset,
+        },
+    )
+
+    rows = extract_rows(result)
+
+    return [
+        serialize_record_ids(row)
+        for row in rows[:limit]
+    ]
+
+
+async def count_memberships(
+    db: AsyncSurreal,
+    organization_id: str,
+):
+    organization_record = to_record_id(
+        "organizations",
+        organization_id,
+    )
+
+    result = await db.query(
+        """
+        SELECT count() AS total
+        FROM memberships
+        WHERE organization_id = $organization_id
+        GROUP ALL;
+        """,
+        {
+            "organization_id": organization_record,
+        },
+    )
+
+    if not isinstance(result, list):
+        return 0
+
+    for item in result:
+        if not isinstance(item, dict):
+            continue
+
+        if "total" in item:
+            return item["total"]
+
+        rows = item.get("result")
+
+        if isinstance(rows, list) and rows:
+            return rows[0].get("total", 0)
+
+        if isinstance(rows, dict):
+            return rows.get("total", 0)
+
+    return 0
 
 async def get_membership_by_id(
     db: AsyncSurreal,

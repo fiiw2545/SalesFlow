@@ -58,3 +58,11 @@ class TaskResponse(BaseModel):
     organization_id: RecordID
     created_at: datetime
     updated_at: datetime | None = None
+
+
+class TaskListResponse(BaseModel):
+    items: list[TaskResponse]
+    total: int
+    page: int
+    limit: int
+    total_pages: int

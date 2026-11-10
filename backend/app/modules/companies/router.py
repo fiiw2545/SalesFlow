@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, status, Query
 from surrealdb import AsyncSurreal
 
 from app.database.dependencies import get_db
@@ -36,6 +36,9 @@ router = APIRouter(
     response_model=CompanyListResponse,
 )
 async def read_companies(
+    page: int = Query(default=1, ge=1),
+    limit: int = Query(default=10, ge=1, le=100),
+    search: str = Query(default="", max_length=100),
     db: AsyncSurreal = Depends(get_db),
     organization_id: str = Depends(get_current_organization_id),
     membership=Depends(get_current_membership),
@@ -43,25 +46,31 @@ async def read_companies(
     return await list_companies(
         db=db,
         organization_id=organization_id,
+        page=page,
+        limit=limit,
+        search=search,
     )
 
 
 @router.get(
-    "/{company_id}",
-    response_model=CompanyResponse,
+    "/",
+    response_model=CompanyListResponse,
 )
-async def read_company(
-    company_id: str,
+async def read_companies(
+    page: int = Query(default=1, ge=1),
+    limit: int = Query(default=10, ge=1, le=100),
+    search: str | None = Query(default=None, max_length=100),
     db: AsyncSurreal = Depends(get_db),
     organization_id: str = Depends(get_current_organization_id),
     membership=Depends(get_current_membership),
 ):
-    return await get_company(
+    return await list_companies(
         db=db,
-        company_id=company_id,
         organization_id=organization_id,
+        page=page,
+        limit=limit,
+        search=search,
     )
-
 
 @router.post(
     "/",

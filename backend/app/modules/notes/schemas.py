@@ -40,3 +40,10 @@ class NoteResponse(BaseModel):
 
     created_at: datetime
     updated_at: datetime | None = None
+
+class NoteListResponse(BaseModel):
+    items: list[NoteResponse]
+    total: int
+    page: int
+    limit: int
+    total_pages: int

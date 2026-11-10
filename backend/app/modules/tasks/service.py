@@ -4,6 +4,7 @@ from surrealdb import AsyncSurreal
 
 from app.modules.tasks.repository import (
     get_tasks,
+    count_tasks,
     get_task_by_id,
     create_task,
     update_task,
@@ -45,11 +46,28 @@ async def validate_related_records(
 async def list_tasks(
     db: AsyncSurreal,
     organization_id: str,
+    page: int = 1,
+    limit: int = 10,
 ):
-    return await get_tasks(
+    items = await get_tasks(
+        db=db,
+        organization_id=organization_id,
+        page=page,
+        limit=limit,
+    )
+
+    total = await count_tasks(
         db=db,
         organization_id=organization_id,
     )
+
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "limit": limit,
+        "total_pages": (total + limit - 1) // limit,
+    }
 
 
 async def retrieve_task(

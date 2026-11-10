@@ -1,5 +1,5 @@
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, status, Query
 from surrealdb import AsyncSurreal
 
 from app.database.dependencies import get_db
@@ -36,6 +36,8 @@ router = APIRouter(
     response_model=MembershipListResponse,
 )
 async def get_memberships_endpoint(
+    page: int = Query(default=1, ge=1),
+    limit: int = Query(default=10, ge=1, le=100),
     db: AsyncSurreal = Depends(get_db),
     organization_id: str = Depends(get_current_organization_id),
     current_membership=Depends(get_current_membership),
@@ -43,6 +45,8 @@ async def get_memberships_endpoint(
     return await get_all_memberships(
         db=db,
         organization_id=organization_id,
+        page=page,
+        limit=limit,
     )
 
 

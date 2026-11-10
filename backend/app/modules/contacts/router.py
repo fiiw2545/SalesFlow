@@ -1,5 +1,4 @@
-
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from surrealdb import AsyncSurreal
 
 from app.database.dependencies import get_db
@@ -20,18 +19,24 @@ router = APIRouter(
 
 @router.get("/")
 async def get_contacts(
+    page: int = Query(default=1, ge=1),
+    limit: int = Query(default=10, ge=1, le=100),
+    search: str | None = Query(default=None, max_length=100),
     organization_id: str = Depends(get_current_organization_id),
     membership: dict = Depends(get_current_membership),
     db: AsyncSurreal = Depends(get_db)
 ):
-    contacts = await service.get_contacts(
+    result = await service.get_contacts(
         db,
-        organization_id
+        organization_id,
+        page,
+        limit,
+        search,
     )
 
     return {
         "message": "Contacts retrieved successfully",
-        "data": contacts
+        **result
     }
 
 

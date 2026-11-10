@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from surrealdb import AsyncSurreal
 from app.common.dependencies import (
     get_current_user,
@@ -13,6 +13,7 @@ from app.modules.pipelines.stages.schemas import (
     StageCreate,
     StageUpdate,
     StageResponse,
+    StageListResponse,
 )
 
 from app.modules.pipelines.stages.service import (
@@ -32,10 +33,12 @@ router = APIRouter(
 
 @router.get(
     "/",
-    response_model=list[StageResponse],
+    response_model=StageListResponse,
 )
 async def get_all_stages(
     pipeline_id: str,
+    page: int = Query(default=1, ge=1),
+    limit: int = Query(default=10, ge=1, le=100),
     db: AsyncSurreal = Depends(get_db),
     current_user=Depends(get_current_user),
     organization_id: str = Depends(get_current_organization_id),
@@ -45,6 +48,8 @@ async def get_all_stages(
         db=db,
         pipeline_id=pipeline_id,
         organization_id=organization_id,
+        page=page,
+        limit=limit,
     )
 
     if result is None:
