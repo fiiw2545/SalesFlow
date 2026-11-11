@@ -1,3 +1,4 @@
+
 from datetime import datetime, timedelta, timezone
 
 import jwt
@@ -10,11 +11,15 @@ from app.core.config import (
 )
 
 
-def create_access_token(user_id: str) -> str:
+def create_access_token(
+    user_id: str,
+    sid: str,
+) -> str:
     now = datetime.now(timezone.utc)
 
     payload = {
         "sub": user_id,
+        "sid": sid,
         "type": "access",
         "iat": now,
         "exp": now + timedelta(
@@ -29,11 +34,17 @@ def create_access_token(user_id: str) -> str:
     )
 
 
-def create_refresh_token(user_id: str) -> str:
+def create_refresh_token(
+    user_id: str,
+    sid: str,
+    jti: str,
+) -> str:
     now = datetime.now(timezone.utc)
 
     payload = {
         "sub": user_id,
+        "sid": sid,
+        "jti": jti,
         "type": "refresh",
         "iat": now,
         "exp": now + timedelta(
@@ -47,7 +58,11 @@ def create_refresh_token(user_id: str) -> str:
         algorithm=JWT_ALGORITHM,
     )
 
-def decode_token(token: str, expected_type: str) -> dict:
+
+def decode_token(
+    token: str,
+    expected_type: str,
+) -> dict:
     payload = jwt.decode(
         token,
         JWT_SECRET_KEY,
