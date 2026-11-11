@@ -9,7 +9,7 @@ export function usePendingTasks() {
   return useQuery({
     queryKey: ["dashboard", "pending-tasks", activeOrganization?.id],
 
-    queryFn: () => getTasks(),
+    queryFn: ({ signal }) => getTasks(1, 10, signal),
 
     enabled: isReady && !!activeOrganization,
 

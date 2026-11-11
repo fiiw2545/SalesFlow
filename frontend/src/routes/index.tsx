@@ -7,7 +7,6 @@ import LoginPage from "../features/auth/pages/login.page";
 import RegisterPage from "../features/auth/pages/register.page";
 import MyAccountPage from "../features/auth/pages/my-account.page";
 import ProtectedRoute from "../features/auth/routes/protected-route";
-import ComingSoon from "../components/common/coming-soon";
 import NotFoundPage from "../pages/not-found.page";
 import ForbiddenPage from "../pages/forbidden.page";
 import CompaniesPage from "../features/companies/pages/companies.page";

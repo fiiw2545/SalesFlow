@@ -11,6 +11,7 @@ import type {
 
 export async function getDashboardSummary(
   dateRange: DashboardDateRange,
+  signal?: AbortSignal,
 ): Promise<DashboardSummary> {
   const response = await apiClient.get<DashboardSummary>(
     endpoints.dashboard.summary,
@@ -19,6 +20,7 @@ export async function getDashboardSummary(
         start_date: dateRange.startDate,
         end_date: dateRange.endDate,
       },
+      signal,
     },
   );
 
@@ -27,6 +29,7 @@ export async function getDashboardSummary(
 
 export async function getDealsByStatus(
   dateRange: DashboardDateRange,
+  signal?: AbortSignal,
 ): Promise<DealsByStatusResponse> {
   const response = await apiClient.get<DealsByStatusResponse>(
     endpoints.dashboard.dealsByStatus,
@@ -35,6 +38,7 @@ export async function getDealsByStatus(
         start_date: dateRange.startDate,
         end_date: dateRange.endDate,
       },
+      signal,
     },
   );
 
@@ -43,6 +47,7 @@ export async function getDealsByStatus(
 
 export async function getDealsByStage(
   dateRange: DashboardDateRange,
+  signal?: AbortSignal,
 ): Promise<DealsByStageResponse> {
   const response = await apiClient.get<DealsByStageResponse>(
     endpoints.dashboard.dealsByStage,
@@ -51,6 +56,7 @@ export async function getDealsByStage(
         start_date: dateRange.startDate,
         end_date: dateRange.endDate,
       },
+      signal,
     },
   );
 

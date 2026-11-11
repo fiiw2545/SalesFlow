@@ -1,19 +1,12 @@
 import { useMemo, useState } from "react";
 
-import {
-  BriefcaseBusiness,
-  CircleDollarSign,
-  Trophy,
-  ListTodo,
-  CalendarDays,
-  Download,
-} from "lucide-react";
+import { CalendarDays, Download } from "lucide-react";
 
-import KpiCard from "./features/dashboard/components/kpi-card";
 import DealsByStatusChart from "./features/dashboard/components/deals-by-status-chart";
 import DealsByStageChart from "./features/dashboard/components/deals-by-stage-chart";
 import RecentActivities from "./features/dashboard/components/recent-activities";
 import PendingTasks from "./features/dashboard/components/pending-tasks";
+import { useOrganization } from "./features/organizations/context/organization.context";
 
 import { useDashboardSummary } from "./features/dashboard/hooks/use-dashboard-summary";
 import { getDealsReport } from "./features/dashboard/services/dashboard.service";
@@ -125,6 +118,11 @@ function DashboardSkeleton() {
 }
 
 function App() {
+  const {
+    isReady,
+    isLoading: isOrganizationLoading,
+    isError: isOrganizationError,
+  } = useOrganization();
   const [dateFilter, setDateFilter] =
     useState<DashboardDateFilter>("last30Days");
 
@@ -169,6 +167,9 @@ function App() {
   };
 
   const { data, isLoading, isError, refetch } = useDashboardSummary(dateRange);
+  if (isOrganizationLoading || (!isReady && !isOrganizationError)) {
+    return <DashboardSkeleton />;
+  }
 
   const dateRangeLabel = getDashboardDateRangeLabel(dateFilter, dateRange);
   const isCustomRangePending =
@@ -202,9 +203,6 @@ function App() {
 
   const winRate =
     data.total_deals > 0 ? (data.won_deals / data.total_deals) * 100 : 0;
-
-  const formatNumber = (value: number) =>
-    new Intl.NumberFormat("en-US").format(value);
 
   function formatDashboardDate(dateTime?: string): string {
     if (!dateTime) return "";

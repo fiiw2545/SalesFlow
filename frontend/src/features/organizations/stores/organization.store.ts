@@ -7,3 +7,7 @@ export function setActiveOrganizationId(id: string | null) {
 export function getActiveOrganizationId() {
   return activeOrganizationId;
 }
+
+export function clearActiveOrganizationId() {
+  activeOrganizationId = null;
+}

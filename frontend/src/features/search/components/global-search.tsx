@@ -3,7 +3,6 @@ import { useNavigate } from "react-router";
 
 import {
   Search,
-  X,
   Building2,
   ContactRound,
   BriefcaseBusiness,

@@ -30,11 +30,13 @@ function normalizePayload(payload: ActivityPayload): ActivityPayload {
 export async function getActivities(
   page = 1,
   limit = 10,
+  signal?: AbortSignal,
 ): Promise<ActivityListResponse> {
   const response = await apiClient.get<ActivityListResponse>(
     endpoints.activities.list,
     {
       params: { page, limit },
+      signal,
     },
   );
 

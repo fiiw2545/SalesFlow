@@ -11,20 +11,27 @@ import type {
 export async function getNotifications(
   page = 1,
   limit = 10,
+  signal?: AbortSignal,
 ): Promise<NotificationListResponse> {
   const response = await apiClient.get<NotificationListResponse>(
     endpoints.notifications.list,
     {
       params: { page, limit },
+      signal,
     },
   );
 
   return response.data;
 }
 
-export async function getUnreadCount(): Promise<UnreadCountResponse> {
+export async function getUnreadCount(
+  signal?: AbortSignal,
+): Promise<UnreadCountResponse> {
   const response = await apiClient.get<UnreadCountResponse>(
     endpoints.notifications.unreadCount,
+    {
+      signal,
+    },
   );
 
   return response.data;

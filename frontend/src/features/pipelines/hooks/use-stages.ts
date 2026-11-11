@@ -44,7 +44,7 @@ export function useCreateStage() {
       payload: StagePayload;
     }) => createStage(pipelineId, payload),
 
-    onSuccess: (_, variables) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ["stages"],
       });

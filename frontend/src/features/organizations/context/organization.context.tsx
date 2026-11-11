@@ -11,7 +11,10 @@ import { useQuery } from "@tanstack/react-query";
 import { getOrganizations } from "../services/organization.service";
 import type { Organization } from "../types/organization.types";
 
-import { setActiveOrganizationId as setStoredActiveOrganizationId } from "../stores/organization.store";
+import {
+  getActiveOrganizationId,
+  setActiveOrganizationId as setStoredActiveOrganizationId,
+} from "../stores/organization.store";
 
 import { useAuth } from "../../auth/context/auth.context";
 
@@ -30,41 +33,45 @@ interface OrganizationProviderProps {
   children: ReactNode;
 }
 
+interface SelectedOrganization {
+  userId: string;
+  organizationId: string;
+}
+
 export function OrganizationProvider({ children }: OrganizationProviderProps) {
-  const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
+  const { user, isAuthenticated, isLoading: isAuthLoading } = useAuth();
 
-  useEffect(() => {
-    if (!isAuthLoading && !isAuthenticated) {
-      setActiveOrganizationState(null);
-      setStoredActiveOrganizationId(null);
-      setSyncedOrganizationId(null);
-    }
-  }, [isAuthLoading, isAuthenticated]);
+  const [selectedOrganization, setSelectedOrganization] =
+    useState<SelectedOrganization | null>(null);
 
-  const [activeOrganizationId, setActiveOrganizationState] = useState<
-    string | null
-  >(null);
-
-  const [syncedOrganizationId, setSyncedOrganizationId] = useState<
+  const [syncedOrganizationKey, setSyncedOrganizationKey] = useState<
     string | null
   >(null);
 
   const {
     data,
-    isLoading: isOrganizationLoading,
+    isLoading: isQueryLoading,
     isError,
   } = useQuery({
-    queryKey: ["organizations", "all"],
+    queryKey: ["organizations", "all", user?.id],
     queryFn: () => getOrganizations(1, 100),
-    enabled: !isAuthLoading && isAuthenticated,
+    enabled: !isAuthLoading && isAuthenticated && !!user?.id,
     staleTime: 5 * 60 * 1000,
   });
 
+  const isOrganizationLoading = isAuthenticated && !!user?.id && isQueryLoading;
+
   const organizations = isAuthenticated ? (data?.items ?? []) : [];
+
+  // Only use the selected organization belonging to the current user.
+  const selectedOrganizationId =
+    selectedOrganization && selectedOrganization.userId === user?.id
+      ? selectedOrganization.organizationId
+      : null;
 
   const activeOrganization =
     organizations.find(
-      (organization) => organization.id === activeOrganizationId,
+      (organization) => organization.id === selectedOrganizationId,
     ) ??
     organizations.find((organization) => organization.is_active) ??
     organizations[0] ??
@@ -72,22 +79,72 @@ export function OrganizationProvider({ children }: OrganizationProviderProps) {
 
   const currentOrganizationId = activeOrganization?.id ?? null;
 
+  const currentOrganizationKey =
+    user?.id && currentOrganizationId
+      ? `${user.id}:${currentOrganizationId}`
+      : null;
+
+  // Synchronize the external store only after the current user's
+  // organization query has completed successfully.
   useEffect(() => {
+    if (
+      isAuthLoading ||
+      !isAuthenticated ||
+      !user?.id ||
+      isOrganizationLoading ||
+      isError ||
+      data === undefined ||
+      !currentOrganizationId ||
+      !currentOrganizationKey
+    ) {
+      setStoredActiveOrganizationId(null);
+      setSyncedOrganizationKey(null);
+      return;
+    }
+
     setStoredActiveOrganizationId(currentOrganizationId);
-    setSyncedOrganizationId(currentOrganizationId);
-  }, [currentOrganizationId]);
+    setSyncedOrganizationKey(currentOrganizationKey);
+  }, [
+    isAuthLoading,
+    isAuthenticated,
+    user?.id,
+    isOrganizationLoading,
+    isError,
+    data,
+    currentOrganizationId,
+    currentOrganizationKey,
+  ]);
 
   const isReady =
     !isAuthLoading &&
     isAuthenticated &&
+    !!user?.id &&
     !isOrganizationLoading &&
     !isError &&
-    syncedOrganizationId === currentOrganizationId;
+    data !== undefined &&
+    !!currentOrganizationId &&
+    syncedOrganizationKey === currentOrganizationKey &&
+    getActiveOrganizationId() === currentOrganizationId;
+
+  const handleSetActiveOrganization = (organizationId: string) => {
+    if (!user?.id) return;
+
+    const organizationExists = organizations.some(
+      (organization) => organization.id === organizationId,
+    );
+
+    if (!organizationExists) return;
+
+    setSelectedOrganization({
+      userId: user.id,
+      organizationId,
+    });
+  };
 
   const value: OrganizationContextType = {
     organizations,
     activeOrganization,
-    setActiveOrganization: setActiveOrganizationState,
+    setActiveOrganization: handleSetActiveOrganization,
     isLoading: isAuthLoading || isOrganizationLoading,
     isError,
     isReady,

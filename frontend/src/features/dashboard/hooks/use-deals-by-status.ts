@@ -15,7 +15,7 @@ export function useDealsByStatus(dateRange: DashboardDateRange) {
       dateRange.startDate,
       dateRange.endDate,
     ],
-    queryFn: () => getDealsByStatus(dateRange),
+    queryFn: ({ signal }) => getDealsByStatus(dateRange, signal),
     enabled: isReady && !!activeOrganization,
   });
 }

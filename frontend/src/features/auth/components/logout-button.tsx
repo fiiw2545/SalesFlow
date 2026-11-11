@@ -3,16 +3,34 @@ import { useNavigate } from "react-router";
 import { LogOut, LoaderCircle } from "lucide-react";
 
 import { logout } from "../services/auth.service";
+import { setActiveOrganizationId } from "../../organizations/stores/organization.store";
 
 function LogoutButton() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
+  const clearSessionData = () => {
+    setActiveOrganizationId(null);
+
+    // Update authentication state first.
+    queryClient.setQueryData(["auth", "me"], null);
+
+    // Remove all non-auth cached data.
+    queryClient.removeQueries({
+      predicate: (query) => query.queryKey[0] !== "auth",
+    });
+  };
+
   const logoutMutation = useMutation({
     mutationFn: logout,
 
-    onSuccess: () => {
-      queryClient.clear();
+    onMutate: async () => {
+      await queryClient.cancelQueries();
+      clearSessionData();
+    },
+
+    onSettled: () => {
+      clearSessionData();
       navigate("/login", { replace: true });
     },
   });

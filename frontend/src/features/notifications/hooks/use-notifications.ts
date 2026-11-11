@@ -24,7 +24,7 @@ export function useNotifications(enabled = true) {
 
   return useQuery({
     queryKey: notificationKeys.list(activeOrganization?.id),
-    queryFn: () => getNotifications(1, 10),
+    queryFn: ({ signal }) => getNotifications(1, 10, signal),
     enabled: isReady && !!activeOrganization && enabled,
   });
 }
@@ -34,7 +34,7 @@ export function useUnreadNotificationCount() {
 
   return useQuery({
     queryKey: notificationKeys.unreadCount(activeOrganization?.id),
-    queryFn: getUnreadCount,
+    queryFn: ({ signal }) => getUnreadCount(signal),
     enabled: isReady && !!activeOrganization,
     refetchInterval: 30_000,
   });
@@ -42,7 +42,6 @@ export function useUnreadNotificationCount() {
 
 export function useMarkNotificationAsRead() {
   const queryClient = useQueryClient();
-  const { activeOrganization } = useOrganization();
 
   return useMutation({
     mutationFn: (id: string) => markNotificationAsRead(id),
@@ -57,7 +56,6 @@ export function useMarkNotificationAsRead() {
 
 export function useMarkAllNotificationsAsRead() {
   const queryClient = useQueryClient();
-  const { activeOrganization } = useOrganization();
 
   return useMutation({
     mutationFn: markAllNotificationsAsRead,

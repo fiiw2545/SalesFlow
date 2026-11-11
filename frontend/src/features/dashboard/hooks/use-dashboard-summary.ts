@@ -15,7 +15,7 @@ export function useDashboardSummary(dateRange: DashboardDateRange) {
       dateRange.startDate,
       dateRange.endDate,
     ],
-    queryFn: () => getDashboardSummary(dateRange),
+    queryFn: ({ signal }) => getDashboardSummary(dateRange, signal),
     enabled: isReady && !!activeOrganization,
   });
 }

@@ -30,9 +30,11 @@ function normalizePayload(payload: TaskPayload): TaskPayload {
 export async function getTasks(
   page = 1,
   limit = 10,
+  signal?: AbortSignal,
 ): Promise<TaskListResponse> {
   const response = await apiClient.get<TaskListResponse>(endpoints.tasks.list, {
     params: { page, limit },
+    signal,
   });
 
   return response.data;

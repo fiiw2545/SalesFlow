@@ -35,7 +35,6 @@ import type {
 import type { Company } from "../../companies/types/company.types";
 import type { Contact } from "../../contacts/types/contact.types";
 import type { Pipeline } from "../../pipelines/types/pipeline.types";
-import type { Stage } from "../../pipelines/types/stage.types";
 
 interface DealFormData {
   title: string;

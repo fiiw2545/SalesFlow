@@ -9,7 +9,7 @@ export function useRecentActivities() {
   return useQuery({
     queryKey: ["dashboard", "recent-activities", activeOrganization?.id],
 
-    queryFn: () => getActivities(),
+    queryFn: ({ signal }) => getActivities(1, 10, signal),
 
     enabled: isReady && !!activeOrganization,
 

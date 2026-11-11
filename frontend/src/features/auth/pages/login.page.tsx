@@ -16,6 +16,7 @@ import {
 import AuthLayout from "../components/auth-layout";
 import { login } from "../services/auth.service";
 import { loginSchema, type LoginFormValues } from "../schemas/login.schema";
+import { setActiveOrganizationId } from "../../organizations/stores/organization.store";
 
 function LoginPage() {
   const navigate = useNavigate();
@@ -33,6 +34,21 @@ function LoginPage() {
 
   const loginMutation = useMutation({
     mutationFn: login,
+
+    onMutate: async () => {
+      await queryClient.cancelQueries();
+
+      // Clear the previous organization.
+      setActiveOrganizationId(null);
+
+      // Keep the application unauthenticated during login.
+      queryClient.setQueryData(["auth", "me"], null);
+
+      // Remove cached data from the previous account.
+      queryClient.removeQueries({
+        predicate: (query) => query.queryKey[0] !== "auth",
+      });
+    },
 
     onSuccess: (user) => {
       queryClient.setQueryData(["auth", "me"], {
