@@ -13,6 +13,7 @@ import {
   Building,
   UserCog,
   X,
+  Files,
 } from "lucide-react";
 
 type AppSidebarProps = {
@@ -59,6 +60,16 @@ const menuGroups: MenuGroup[] = [
       { label: "แท็ก", path: "/tags", icon: Tags },
       { label: "องค์กร", path: "/organization", icon: Building },
       { label: "สมาชิก", path: "/members", icon: UserCog },
+    ],
+  },
+  {
+    label: "ไฟล์",
+    items: [
+      {
+        label: "ไฟล์",
+        path: "/files",
+        icon: Files,
+      },
     ],
   },
 ];

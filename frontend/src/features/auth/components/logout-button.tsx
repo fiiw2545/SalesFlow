@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router";
 import { LogOut, LoaderCircle } from "lucide-react";
-
+import { clearAvatarCache } from "../utils/avatar-cache";
 import { logout } from "../services/auth.service";
 import { setActiveOrganizationId } from "../../organizations/stores/organization.store";
 
@@ -10,6 +10,7 @@ function LogoutButton() {
   const queryClient = useQueryClient();
 
   const clearSessionData = () => {
+    clearAvatarCache();
     setActiveOrganizationId(null);
 
     // Update authentication state first.

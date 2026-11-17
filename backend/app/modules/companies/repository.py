@@ -1,3 +1,4 @@
+
 from datetime import datetime, timezone
 
 from surrealdb import AsyncSurreal, RecordID
@@ -257,6 +258,12 @@ async def create_company(
         "created_by": user_record,
     }
 
+    if company_data.get("logo_file_id"):
+        company_data["logo_file_id"] = to_record_id(
+            "files",
+            company_data["logo_file_id"],
+        )
+
     query = """
         CREATE companies
         CONTENT $data
@@ -282,10 +289,16 @@ async def update_company(
     db: AsyncSurreal,
     company_id: str,
     data: dict,
+    organization_id: str,
 ):
     company_record = to_record_id(
         "companies",
         company_id,
+    )
+
+    organization_record = to_record_id(
+        "organizations",
+        organization_id,
     )
 
     update_data = {
@@ -293,9 +306,19 @@ async def update_company(
         "updated_at": datetime.now(timezone.utc),
     }
 
+    if (
+        "logo_file_id" in update_data
+        and update_data["logo_file_id"] is not None
+    ):
+        update_data["logo_file_id"] = to_record_id(
+            "files",
+            update_data["logo_file_id"],
+        )
+
     query = """
         UPDATE $company_id
         MERGE $data
+        WHERE organization_id = $organization_id
         RETURN AFTER;
     """
 
@@ -303,6 +326,7 @@ async def update_company(
         query,
         {
             "company_id": company_record,
+            "organization_id": organization_record,
             "data": update_data,
         },
     )
@@ -384,14 +408,21 @@ async def get_company_deals(
 async def delete_company(
     db: AsyncSurreal,
     company_id: str,
+    organization_id: str,
 ):
     company_record = to_record_id(
         "companies",
         company_id,
     )
 
+    organization_record = to_record_id(
+        "organizations",
+        organization_id,
+    )
+
     query = """
         DELETE $company_id
+        WHERE organization_id = $organization_id
         RETURN BEFORE;
     """
 
@@ -399,6 +430,7 @@ async def delete_company(
         query,
         {
             "company_id": company_record,
+            "organization_id": organization_record,
         },
     )
 

@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import axios from "axios";
 import Pagination from "../../../components/ui/pagination";
-
+import FilePicker from "../../files/components/file-picker";
+import FilePreview from "../../files/components/file-preview";
 import {
   Plus,
   Building2,
@@ -11,6 +12,8 @@ import {
   Phone,
   MapPin,
   LoaderCircle,
+  Tags,
+  X,
 } from "lucide-react";
 
 import { useToast } from "../../../components/common/toast-provider";
@@ -34,12 +37,23 @@ import {
 
 import type { Company, CompanyPayload } from "../types/company.types";
 
+import {
+  useCompanyTags,
+  useAssignCompanyTag,
+  useUnassignCompanyTag,
+} from "../hooks/use-company-tags";
+
+import { useTags } from "../../tags/hooks/use-tags";
+
+import type { Tag } from "../../tags/types/tag.types";
+
 const emptyForm: CompanyPayload = {
   name: "",
   address: "",
   industry: "",
   phone: "",
   website: "",
+  logo_file_id: null,
 };
 
 function getErrorMessage(error: unknown): string {
@@ -52,6 +66,55 @@ function getErrorMessage(error: unknown): string {
   }
 
   return "เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง";
+}
+
+function CompanyTagsCell({
+  companyId,
+  tags,
+  onManage,
+}: {
+  companyId: string;
+  tags: Tag[];
+  onManage: () => void;
+}) {
+  const { data: assignments, isLoading } = useCompanyTags(companyId);
+
+  const assignedTags = (assignments ?? [])
+    .map((assignment) => tags.find((tag) => tag.id === assignment.tag_id))
+    .filter((tag): tag is Tag => !!tag);
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      {isLoading ? (
+        <LoaderCircle size={15} className="animate-spin text-slate-400" />
+      ) : assignedTags.length > 0 ? (
+        assignedTags.map((tag) => (
+          <span
+            key={tag.id}
+            className="rounded-full px-2.5 py-1 text-xs font-medium"
+            style={{
+              backgroundColor: tag.color ?? "#e2e8f0",
+              color: "#ffffff",
+            }}
+          >
+            {tag.name}
+          </span>
+        ))
+      ) : (
+        <span className="text-xs text-slate-400">ไม่มี Tags</span>
+      )}
+
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={onManage}
+        title="จัดการ Tags"
+        aria-label="จัดการ Tags"
+      >
+        <Tags size={15} />
+      </Button>
+    </div>
+  );
 }
 
 function CompaniesPage() {
@@ -100,6 +163,25 @@ function CompaniesPage() {
     );
   }, [companies, search]);
 
+  const [tagCompany, setTagCompany] = useState<Company | null>(null);
+
+  const { data: tagsResponse } = useTags(1, 100);
+  const availableTags = tagsResponse?.items ?? [];
+
+  const { data: companyTagAssignments, isLoading: isCompanyTagsLoading } =
+    useCompanyTags(tagCompany?.id ?? "");
+
+  const assignTagMutation = useAssignCompanyTag();
+  const unassignTagMutation = useUnassignCompanyTag();
+
+  const assignedTagIds = new Set(
+    (companyTagAssignments ?? []).map((assignment) => assignment.tag_id),
+  );
+
+  const unassignedTags = availableTags.filter(
+    (tag) => !assignedTagIds.has(tag.id),
+  );
+
   useEffect(() => {
     if (selectedCompany) {
       setForm({
@@ -108,6 +190,7 @@ function CompaniesPage() {
         industry: selectedCompany.industry ?? "",
         phone: selectedCompany.phone ?? "",
         website: selectedCompany.website ?? "",
+        logo_file_id: selectedCompany.logo_file_id,
       });
     } else {
       setForm(emptyForm);
@@ -150,6 +233,44 @@ function CompaniesPage() {
     }));
   }
 
+  function openTagModal(company: Company) {
+    setTagCompany(company);
+  }
+
+  function closeTagModal() {
+    setTagCompany(null);
+  }
+
+  async function handleAssignTag(tagId: string) {
+    if (!tagCompany) return;
+
+    try {
+      await assignTagMutation.mutateAsync({
+        companyId: tagCompany.id,
+        payload: { tag_id: tagId },
+      });
+
+      showToast("เพิ่ม Tag ให้บริษัทเรียบร้อยแล้ว", "success");
+    } catch (error) {
+      showToast(getErrorMessage(error), "error");
+    }
+  }
+
+  async function handleUnassignTag(tagId: string) {
+    if (!tagCompany) return;
+
+    try {
+      await unassignTagMutation.mutateAsync({
+        companyId: tagCompany.id,
+        tagId,
+      });
+
+      showToast("ถอด Tag ออกจากบริษัทเรียบร้อยแล้ว", "success");
+    } catch (error) {
+      showToast(getErrorMessage(error), "error");
+    }
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setFormError("");
@@ -160,6 +281,7 @@ function CompaniesPage() {
       industry: form.industry?.trim() || null,
       phone: form.phone?.trim() || null,
       website: form.website?.trim() || null,
+      logo_file_id: form.logo_file_id ?? null,
     };
 
     if (!payload.name) {
@@ -209,8 +331,13 @@ function CompaniesPage() {
       header: "บริษัท",
       render: (company) => (
         <div className="flex items-center gap-3">
-          <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
-            <Building2 size={19} />
+          <div className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-blue-50 text-blue-600">
+            <FilePreview
+              fileId={company.logo_file_id}
+              alt={`${company.name} logo`}
+              className="size-full object-cover"
+              fallback={<Building2 size={19} />}
+            />
           </div>
 
           <div className="min-w-0">
@@ -228,6 +355,17 @@ function CompaniesPage() {
       key: "industry",
       header: "ประเภทธุรกิจ",
       render: (company) => <span>{company.industry || "—"}</span>,
+    },
+    {
+      key: "tags",
+      header: "Tags",
+      render: (company) => (
+        <CompanyTagsCell
+          companyId={company.id}
+          tags={availableTags}
+          onManage={() => openTagModal(company)}
+        />
+      ),
     },
     {
       key: "phone",
@@ -378,6 +516,19 @@ function CompaniesPage() {
             placeholder="กรอกชื่อบริษัท"
           />
 
+          <FilePicker
+            value={form.logo_file_id ?? null}
+            onChange={(fileId) =>
+              setForm((current) => ({
+                ...current,
+                logo_file_id: fileId,
+              }))
+            }
+            category="IMAGE"
+            label="Company Logo"
+            disabled={isSaving}
+          />
+
           <Input
             label="ประเภทธุรกิจ"
             name="industry"
@@ -437,6 +588,109 @@ function CompaniesPage() {
             </Button>
           </div>
         </form>
+      </Modal>
+      <Modal
+        isOpen={!!tagCompany}
+        onClose={closeTagModal}
+        title="จัดการ Tags"
+        description={`จัดการ Tags ของ ${tagCompany?.name ?? ""}`}
+        size="md"
+      >
+        <div className="space-y-5 p-6">
+          <div>
+            <h3 className="mb-3 text-sm font-semibold text-slate-700">
+              Tags ที่กำลังใช้งาน
+            </h3>
+
+            {isCompanyTagsLoading ? (
+              <LoaderCircle className="animate-spin text-blue-600" size={22} />
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {(companyTagAssignments ?? []).map((assignment) => {
+                  const tag = availableTags.find(
+                    (item) => item.id === assignment.tag_id,
+                  );
+
+                  if (!tag) return null;
+
+                  return (
+                    <span
+                      key={tag.id}
+                      className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm"
+                      style={{
+                        backgroundColor: tag.color ?? "#e2e8f0",
+                        color: "#ffffff",
+                      }}
+                    >
+                      {tag.name}
+
+                      <button
+                        type="button"
+                        onClick={() => handleUnassignTag(tag.id)}
+                        disabled={unassignTagMutation.isPending}
+                        className="rounded-full hover:opacity-70"
+                        aria-label={`ถอด ${tag.name}`}
+                      >
+                        <X size={14} />
+                      </button>
+                    </span>
+                  );
+                })}
+
+                {companyTagAssignments?.length === 0 && (
+                  <p className="text-sm text-slate-400">ยังไม่มี Tags</p>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="border-t border-slate-100 pt-4">
+            <h3 className="mb-3 text-sm font-semibold text-slate-700">
+              เพิ่ม Tag
+            </h3>
+
+            <div className="space-y-2">
+              {unassignedTags.map((tag) => (
+                <div
+                  key={tag.id}
+                  className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 p-3"
+                >
+                  <span
+                    className="rounded-full px-3 py-1 text-xs font-medium"
+                    style={{
+                      backgroundColor: tag.color ?? "#e2e8f0",
+                      color: "#ffffff",
+                    }}
+                  >
+                    {tag.name}
+                  </span>
+
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleAssignTag(tag.id)}
+                    disabled={assignTagMutation.isPending}
+                  >
+                    <Plus size={14} />
+                    เพิ่ม
+                  </Button>
+                </div>
+              ))}
+
+              {unassignedTags.length === 0 && (
+                <p className="text-sm text-slate-400">
+                  เพิ่ม Tags ครบทั้งหมดแล้ว
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div className="flex justify-end border-t border-slate-100 pt-4">
+            <Button variant="outline" onClick={closeTagModal}>
+              ปิด
+            </Button>
+          </div>
+        </div>
       </Modal>
     </div>
   );

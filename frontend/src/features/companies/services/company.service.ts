@@ -6,6 +6,9 @@ import type {
   CompanyListResponse,
   CompanyPayload,
   CompanyDeleteResponse,
+  CompanyTagAssignment,
+  CompanyTagAssignmentPayload,
+  CompanyTagDeleteResponse,
 } from "../types/company.types";
 
 export async function getCompanies(
@@ -59,6 +62,39 @@ export async function deleteCompany(
 ): Promise<CompanyDeleteResponse> {
   const response = await apiClient.delete<CompanyDeleteResponse>(
     endpoints.companies.delete(id),
+  );
+
+  return response.data;
+}
+
+export async function getCompanyTags(
+  companyId: string,
+): Promise<CompanyTagAssignment[]> {
+  const response = await apiClient.get<CompanyTagAssignment[]>(
+    endpoints.tags.companies.list(companyId),
+  );
+
+  return response.data;
+}
+
+export async function assignCompanyTag(
+  companyId: string,
+  payload: CompanyTagAssignmentPayload,
+): Promise<CompanyTagAssignment> {
+  const response = await apiClient.post<CompanyTagAssignment>(
+    endpoints.tags.companies.add(companyId),
+    payload,
+  );
+
+  return response.data;
+}
+
+export async function unassignCompanyTag(
+  companyId: string,
+  tagId: string,
+): Promise<CompanyTagDeleteResponse> {
+  const response = await apiClient.delete<CompanyTagDeleteResponse>(
+    endpoints.tags.companies.remove(companyId, tagId),
   );
 
   return response.data;

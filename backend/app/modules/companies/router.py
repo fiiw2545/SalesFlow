@@ -1,3 +1,4 @@
+
 from fastapi import APIRouter, Depends, status, Query
 from surrealdb import AsyncSurreal
 
@@ -18,7 +19,6 @@ from app.modules.companies.schemas import (
 
 from app.modules.companies.service import (
     list_companies,
-    get_company,
     create_new_company,
     update_existing_company,
     delete_existing_company,
@@ -52,26 +52,6 @@ async def read_companies(
     )
 
 
-@router.get(
-    "/",
-    response_model=CompanyListResponse,
-)
-async def read_companies(
-    page: int = Query(default=1, ge=1),
-    limit: int = Query(default=10, ge=1, le=100),
-    search: str | None = Query(default=None, max_length=100),
-    db: AsyncSurreal = Depends(get_db),
-    organization_id: str = Depends(get_current_organization_id),
-    membership=Depends(get_current_membership),
-):
-    return await list_companies(
-        db=db,
-        organization_id=organization_id,
-        page=page,
-        limit=limit,
-        search=search,
-    )
-
 @router.post(
     "/",
     response_model=CompanyResponse,
@@ -89,6 +69,25 @@ async def create_company_endpoint(
         data=payload.model_dump(),
         organization_id=organization_id,
         current_user=current_user,
+    )
+
+
+@router.get(
+    "/{company_id}",
+    response_model=CompanyResponse,
+)
+async def read_company_endpoint(
+    company_id: str,
+    db: AsyncSurreal = Depends(get_db),
+    organization_id: str = Depends(get_current_organization_id),
+    membership=Depends(get_current_membership),
+):
+    from app.modules.companies.service import get_company
+
+    return await get_company(
+        db=db,
+        company_id=company_id,
+        organization_id=organization_id,
     )
 
 

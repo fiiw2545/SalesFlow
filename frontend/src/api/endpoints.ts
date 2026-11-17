@@ -128,11 +128,34 @@ const endpoints = {
     delete: (id: string) => `/memberships/${id}`,
   },
 
+  invitations: {
+    list: "/invitations/",
+    create: "/invitations/",
+    validate: (token: string) =>
+      `/invitations/validate/${encodeURIComponent(token)}`,
+    accept: "/invitations/accept",
+    revoke: (id: string) => `/invitations/${id}/revoke`,
+  },
+
   notifications: {
     list: "/notifications/",
     unreadCount: "/notifications/unread-count",
     readAll: "/notifications/read-all",
     read: (id: string) => `/notifications/${id}/read`,
+  },
+
+  files: {
+    upload: "/files/upload",
+    list: "/files/",
+    detail: (id: string) => `/files/${id}`,
+    download: (id: string) => `/files/${id}/download`,
+    delete: (id: string) => `/files/${id}`,
+
+    avatar: {
+      upload: "/files/avatar/upload",
+      download: (id: string) => `/files/avatar/${id}/download`,
+      delete: "/files/avatar",
+    },
   },
 
   system: {

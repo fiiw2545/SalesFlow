@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "react-router";
+import { useNavigate, useLocation } from "react-router";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { AxiosError } from "axios";
@@ -21,6 +21,7 @@ import { setActiveOrganizationId } from "../../organizations/stores/organization
 function LoginPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const location = useLocation();
 
   const [showPassword, setShowPassword] = useState(false);
 
@@ -57,7 +58,16 @@ function LoginPage() {
         email: user.email,
       });
 
-      navigate("/", { replace: true });
+      const params = new URLSearchParams(location.search);
+      const returnTo = params.get("returnTo");
+
+      // Only allow internal application paths.
+      const safeReturnTo =
+        returnTo?.startsWith("/") && !returnTo.startsWith("//")
+          ? returnTo
+          : "/";
+
+      navigate(safeReturnTo, { replace: true });
     },
   });
 

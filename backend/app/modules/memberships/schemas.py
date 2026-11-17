@@ -22,6 +22,8 @@ class MembershipUpdate(BaseModel):
 class MembershipResponse(BaseModel):
     id: str
     user_id: str
+    name: str | None = None
+    email: str | None = None
     organization_id: str
     role: MembershipRole
     joined_at: object

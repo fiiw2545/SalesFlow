@@ -203,6 +203,11 @@ async def get_me(
         "id": str(current_user["id"]),
         "name": current_user["name"],
         "email": current_user["email"],
+        "avatar_file_id": (
+            str(current_user["avatar_file_id"])
+            if current_user.get("avatar_file_id")
+            else None
+        ),
         "message": "Current user retrieved successfully",
     }
 
@@ -242,9 +247,13 @@ async def update_me(
         "id": str(updated_user["id"]),
         "name": updated_user["name"],
         "email": updated_user["email"],
-        "message": "Profile updated successfully",
-    }
-
+        "avatar_file_id": (
+            str(updated_user["avatar_file_id"])
+            if updated_user.get("avatar_file_id")
+            else None
+    ),
+    "message": "Profile updated successfully",
+}
 
 @router.patch(
     "/change-password",
@@ -369,4 +378,4 @@ async def sales_access(
     return {
         "message": "Sales area access granted!",
         "role": current_role.value,
-    }
+}

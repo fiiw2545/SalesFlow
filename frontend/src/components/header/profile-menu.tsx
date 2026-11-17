@@ -1,21 +1,13 @@
 import { useState } from "react";
 import { Link } from "react-router";
 import { ChevronDown, UserRound, X } from "lucide-react";
-
+import UserAvatar from "../../features/auth/components/user-avatar";
 import { useAuth } from "../../features/auth/context/auth.context";
 import LogoutButton from "../../features/auth/components/logout-button";
 
 function ProfileMenu() {
   const [isOpen, setIsOpen] = useState(false);
   const { user } = useAuth();
-
-  const initials =
-    user?.name
-      ?.trim()
-      .split(/\s+/)
-      .slice(0, 2)
-      .map((part) => part.charAt(0).toUpperCase())
-      .join("") || "U";
 
   return (
     <div className="relative">
@@ -27,9 +19,11 @@ function ProfileMenu() {
         aria-label="เปิดเมนูโปรไฟล์"
         className="flex shrink-0 items-center gap-2 rounded-xl p-1.5 transition hover:bg-slate-100"
       >
-        <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm font-semibold text-blue-600">
-          {initials}
-        </div>
+        <UserAvatar
+          fileId={user?.avatar_file_id}
+          name={user?.name ?? "User"}
+          className="size-9 text-sm"
+        />
 
         <div className="hidden min-w-0 text-left sm:block">
           <p className="max-w-32 truncate text-sm font-semibold text-slate-700">
@@ -57,9 +51,11 @@ function ProfileMenu() {
 
           <div className="absolute right-0 z-40 mt-3 w-72 max-w-[calc(100vw-1.5rem)] rounded-2xl border border-slate-200 bg-white p-3 shadow-xl">
             <div className="flex min-w-0 items-start gap-3 border-b border-slate-100 px-2 pb-4">
-              <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-blue-100 font-semibold text-blue-600">
-                {initials}
-              </div>
+              <UserAvatar
+                fileId={user?.avatar_file_id}
+                name={user?.name ?? "User"}
+                className="size-10 text-sm"
+              />
 
               <div className="min-w-0 flex-1 pt-0.5">
                 <p className="truncate text-sm font-semibold text-slate-800">

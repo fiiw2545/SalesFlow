@@ -1,3 +1,4 @@
+
 from fastapi import HTTPException, status
 from surrealdb import AsyncSurreal
 
@@ -12,6 +13,29 @@ from app.modules.companies.repository import (
     get_company_deals,
     delete_company,
 )
+
+from app.modules.files.service import get_file_detail
+
+
+async def validate_company_logo(
+    db: AsyncSurreal,
+    logo_file_id: str | None,
+    organization_id: str,
+):
+    if logo_file_id is None:
+        return
+
+    file_metadata = await get_file_detail(
+        db=db,
+        file_id=logo_file_id,
+        organization_id=organization_id,
+    )
+
+    if file_metadata.get("category") != "IMAGE":
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Company logo must be an image",
+        )
 
 
 async def list_companies(
@@ -81,6 +105,12 @@ async def create_new_company(
             detail="Company name cannot be empty",
         )
 
+    await validate_company_logo(
+        db=db,
+        logo_file_id=data.get("logo_file_id"),
+        organization_id=organization_id,
+    )
+
     existing_company = await get_company_by_name(
         db=db,
         name=name,
@@ -123,6 +153,13 @@ async def update_existing_company(
         organization_id=organization_id,
     )
 
+    if "logo_file_id" in data:
+        await validate_company_logo(
+            db=db,
+            logo_file_id=data["logo_file_id"],
+            organization_id=organization_id,
+        )
+
     if "name" in data:
         if data["name"] is None:
             raise HTTPException(
@@ -159,6 +196,7 @@ async def update_existing_company(
         db=db,
         company_id=company_id,
         data=data,
+        organization_id=organization_id,
     )
 
     if not updated_company:
@@ -208,6 +246,7 @@ async def delete_existing_company(
     deleted_company = await delete_company(
         db=db,
         company_id=company_id,
+        organization_id=organization_id,
     )
 
     if not deleted_company:

@@ -1,5 +1,13 @@
-import { useEffect, useState, type FormEvent } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type FormEvent,
+} from "react";
+
 import axios from "axios";
+import { invalidateAvatarCache } from "../utils/avatar-cache";
 import { useMutation } from "@tanstack/react-query";
 import {
   UserRound,
@@ -7,13 +15,16 @@ import {
   Mail,
   ShieldCheck,
   Fingerprint,
+  Camera,
+  Trash2,
 } from "lucide-react";
 
+import UserAvatar from "../components/user-avatar";
+import { uploadAvatar, removeAvatar } from "../../files/services/file.service";
 import PageHeader from "../../../components/ui/page-header";
 import Button from "../../../components/common/button";
 import Input from "../../../components/common/input";
 import { useToast } from "../../../components/common/toast-provider";
-
 import { useAuth } from "../context/auth.context";
 import { updateProfile, changePassword } from "../services/auth.service";
 
@@ -33,10 +44,58 @@ function MyAccountPage() {
   const { user, isLoading, refreshUser } = useAuth();
   const { showToast } = useToast();
 
+  const avatarInputRef = useRef<HTMLInputElement>(null);
   const [name, setName] = useState("");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+
+  const avatarUploadMutation = useMutation({
+    mutationFn: uploadAvatar,
+    onSuccess: () => {
+      invalidateAvatarCache(user?.avatar_file_id);
+      refreshUser();
+      showToast("Avatar uploaded successfully", "success");
+    },
+    onError: (error: unknown) => {
+      showToast(getErrorMessage(error), "error");
+    },
+  });
+
+  const avatarRemoveMutation = useMutation({
+    mutationFn: removeAvatar,
+    onSuccess: () => {
+      invalidateAvatarCache(user?.avatar_file_id);
+      refreshUser();
+      showToast("Avatar removed successfully", "success");
+    },
+    onError: (error: unknown) => {
+      showToast(getErrorMessage(error), "error");
+    },
+  });
+
+  const handleAvatarUpload = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+
+    if (!file) return;
+
+    const allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+
+    if (!allowedTypes.includes(file.type)) {
+      showToast("Please select JPG, PNG, GIF, or WEBP", "error");
+      event.target.value = "";
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      showToast("Maximum image size is 10 MB", "error");
+      event.target.value = "";
+      return;
+    }
+
+    avatarUploadMutation.mutate(file);
+    event.target.value = "";
+  };
 
   useEffect(() => {
     if (user) {
@@ -139,6 +198,75 @@ function MyAccountPage() {
         title="My Account"
         description="จัดการข้อมูลส่วนตัวและความปลอดภัยของบัญชีผู้ใช้"
       />
+
+      {/* Profile Avatar */}
+      <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+        <div className="flex items-center gap-3 border-b border-slate-100 px-6 py-5">
+          <div className="flex size-10 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+            <Camera size={20} />
+          </div>
+
+          <div>
+            <h2 className="font-semibold text-slate-900">Profile Avatar</h2>
+            <p className="text-sm text-slate-500">
+              Manage your profile picture
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-5 p-6 sm:flex-row sm:items-center">
+          <UserAvatar
+            fileId={user.avatar_file_id}
+            name={user.name}
+            className="size-24 text-2xl"
+          />
+
+          <div className="space-y-3">
+            <div>
+              <p className="text-sm font-medium text-slate-700">
+                Your profile picture
+              </p>
+              <p className="text-xs text-slate-500">
+                JPG, PNG, GIF or WEBP. Maximum 10 MB.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <input
+                ref={avatarInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/gif,image/webp"
+                className="hidden"
+                onChange={handleAvatarUpload}
+                disabled={avatarUploadMutation.isPending}
+              />
+
+              <Button
+                type="button"
+                onClick={() => avatarInputRef.current?.click()}
+                loading={avatarUploadMutation.isPending}
+                disabled={avatarRemoveMutation.isPending}
+              >
+                <Camera size={16} />
+                Upload Avatar
+              </Button>
+
+              {user.avatar_file_id && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  loading={avatarRemoveMutation.isPending}
+                  disabled={avatarUploadMutation.isPending}
+                  onClick={() => avatarRemoveMutation.mutate()}
+                >
+                  <Trash2 size={16} />
+                  Remove Avatar
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* Account Information */}
       <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">

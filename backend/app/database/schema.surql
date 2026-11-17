@@ -256,3 +256,45 @@ DEFINE FIELD OVERWRITE updated_at ON users TYPE none | datetime PERMISSIONS FULL
 DEFINE INDEX users_email_unique ON users FIELDS email UNIQUE;
 
 
+
+-- ------------------------------
+-- TABLE: invitations
+-- ------------------------------
+
+DEFINE TABLE invitations TYPE NORMAL SCHEMAFULL PERMISSIONS NONE;
+
+DEFINE FIELD OVERWRITE accepted_at ON invitations TYPE none | datetime PERMISSIONS FULL;
+DEFINE FIELD OVERWRITE created_at ON invitations TYPE datetime DEFAULT time::now() PERMISSIONS FULL;
+DEFINE FIELD OVERWRITE email ON invitations TYPE string PERMISSIONS FULL;
+DEFINE FIELD OVERWRITE expires_at ON invitations TYPE datetime PERMISSIONS FULL;
+DEFINE FIELD OVERWRITE invited_by ON invitations TYPE record<users> PERMISSIONS FULL;
+DEFINE FIELD OVERWRITE organization_id ON invitations TYPE record<organizations> PERMISSIONS FULL;
+DEFINE FIELD OVERWRITE role ON invitations TYPE string ASSERT $value IN ['ADMIN', 'MANAGER', 'SALES'] PERMISSIONS FULL;
+DEFINE FIELD OVERWRITE status ON invitations TYPE string DEFAULT 'PENDING' ASSERT $value IN ['PENDING', 'ACCEPTED', 'REVOKED', 'EXPIRED'] PERMISSIONS FULL;
+DEFINE FIELD OVERWRITE token_hash ON invitations TYPE string PERMISSIONS FULL;
+
+DEFINE INDEX invitations_token_hash_unique ON invitations FIELDS token_hash UNIQUE;
+DEFINE INDEX invitations_org_email_idx ON invitations FIELDS organization_id, email;
+DEFINE INDEX invitations_status_idx ON invitations FIELDS status;
+DEFINE INDEX invitations_expires_at_idx ON invitations FIELDS expires_at;
+
+
+-- ------------------------------
+-- TABLE: email_logs
+-- ------------------------------
+
+DEFINE TABLE email_logs TYPE NORMAL SCHEMAFULL PERMISSIONS NONE;
+
+DEFINE FIELD OVERWRITE created_at ON email_logs TYPE datetime DEFAULT time::now() PERMISSIONS FULL;
+DEFINE FIELD OVERWRITE error_message ON email_logs TYPE none | string PERMISSIONS FULL;
+DEFINE FIELD OVERWRITE invitation_id ON email_logs TYPE none | record<invitations> PERMISSIONS FULL;
+DEFINE FIELD OVERWRITE organization_id ON email_logs TYPE record<organizations> PERMISSIONS FULL;
+DEFINE FIELD OVERWRITE provider ON email_logs TYPE string DEFAULT 'RESEND' PERMISSIONS FULL;
+DEFINE FIELD OVERWRITE provider_message_id ON email_logs TYPE none | string PERMISSIONS FULL;
+DEFINE FIELD OVERWRITE recipient ON email_logs TYPE string PERMISSIONS FULL;
+DEFINE FIELD OVERWRITE status ON email_logs TYPE string ASSERT $value IN ['SENT', 'FAILED'] PERMISSIONS FULL;
+DEFINE FIELD OVERWRITE subject ON email_logs TYPE string PERMISSIONS FULL;
+
+DEFINE INDEX email_logs_org_idx ON email_logs FIELDS organization_id;
+DEFINE INDEX email_logs_invitation_idx ON email_logs FIELDS invitation_id;
+DEFINE INDEX email_logs_created_at_idx ON email_logs FIELDS created_at;

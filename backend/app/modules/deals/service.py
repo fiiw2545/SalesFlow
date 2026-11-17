@@ -277,16 +277,17 @@ async def edit_deal(
         and normalize_record_id(owner_id)
         != normalize_record_id(actor_id)
     ):
-        await send_notification(
-            db=db,
-            user_id=str(owner_id),
-            organization_id=organization_id,
-            notification_type="DEAL_UPDATED",
-            title="มีการแก้ไขดีล",
-            message=f'ดีล "{existing.get("title", "")}" ได้รับการแก้ไขแล้ว',
-            entity_type="deal",
-            entity_id=deal_id,
-        )
+        notification_result = await send_notification(
+        db=db,
+        user_id=str(owner_id),
+        organization_id=organization_id,
+        notification_type="DEAL_UPDATED",
+        title="มีการแก้ไขดีล",
+        message=f'ดีล "{existing.get("title", "")}" ได้รับการแก้ไขแล้ว',
+        entity_type="deal",
+        entity_id=deal_id,
+    )
+
 
     return result[0]
 

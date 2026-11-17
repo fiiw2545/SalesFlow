@@ -25,3 +25,18 @@ export interface ContactListResponse {
   limit: number;
   total_pages: number;
 }
+
+export interface ContactTagAssignment {
+  id: string;
+  organization_id: string;
+  tag_id: string;
+  created_at: string;
+}
+
+export interface ContactTagAssignmentPayload {
+  tag_id: string;
+}
+
+export interface ContactTagDeleteResponse {
+  message: string;
+}

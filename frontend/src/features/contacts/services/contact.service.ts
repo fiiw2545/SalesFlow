@@ -5,6 +5,9 @@ import type {
   Contact,
   ContactPayload,
   ContactListResponse,
+  ContactTagAssignment,
+  ContactTagAssignmentPayload,
+  ContactTagDeleteResponse,
 } from "../types/contact.types";
 
 type SurrealRecordId = {
@@ -117,4 +120,37 @@ export async function updateContact(
 
 export async function deleteContact(id: string): Promise<void> {
   await apiClient.delete(endpoints.contacts.delete(id));
+}
+
+export async function getContactTags(
+  contactId: string,
+): Promise<ContactTagAssignment[]> {
+  const response = await apiClient.get<ContactTagAssignment[]>(
+    endpoints.tags.contacts.list(contactId),
+  );
+
+  return response.data;
+}
+
+export async function assignContactTag(
+  contactId: string,
+  payload: ContactTagAssignmentPayload,
+): Promise<ContactTagAssignment> {
+  const response = await apiClient.post<ContactTagAssignment>(
+    endpoints.tags.contacts.add(contactId),
+    payload,
+  );
+
+  return response.data;
+}
+
+export async function unassignContactTag(
+  contactId: string,
+  tagId: string,
+): Promise<ContactTagDeleteResponse> {
+  const response = await apiClient.delete<ContactTagDeleteResponse>(
+    endpoints.tags.contacts.remove(contactId, tagId),
+  );
+
+  return response.data;
 }

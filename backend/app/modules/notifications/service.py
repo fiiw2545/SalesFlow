@@ -1,5 +1,12 @@
+
 import logging
+
 from surrealdb import AsyncSurreal
+
+from app.integrations.line.service import (
+    LineDeliveryError,
+    send_text_message,
+)
 
 from app.modules.notifications.repository import (
     get_notifications,
@@ -7,9 +14,9 @@ from app.modules.notifications.repository import (
     count_unread_notifications,
     mark_notification_as_read,
     mark_all_notifications_as_read,
+    create_notification,
+    get_user_line_id,
 )
-
-from app.modules.notifications.repository import create_notification
 
 
 def extract_rows(result):
@@ -19,18 +26,26 @@ def extract_rows(result):
     rows = []
 
     for item in result:
-        if isinstance(item, dict):
-            if "id" in item:
-                rows.append(item)
-                continue
+        if not isinstance(item, dict):
+            continue
 
-            nested = item.get("result")
+        if "id" in item:
+            rows.append(item)
+            continue
 
-            if isinstance(nested, list):
-                rows.extend(
-                    row for row in nested
-                    if isinstance(row, dict)
-                )
+        if "line_user_id" in item:
+            rows.append(item)
+            continue
+
+        nested = item.get("result")
+
+        if isinstance(nested, list):
+            rows.extend(
+                row for row in nested
+                if isinstance(row, dict)
+            )
+        elif isinstance(nested, dict):
+            rows.append(nested)
 
     return rows
 
@@ -120,6 +135,7 @@ async def read_all_notifications(
         "updated_count": len(rows),
     }
 
+
 async def send_notification(
     db: AsyncSurreal,
     user_id: str,
@@ -131,7 +147,7 @@ async def send_notification(
     entity_id: str | None = None,
 ):
     try:
-        return await create_notification(
+        notification = await create_notification(
             db=db,
             user_id=user_id,
             organization_id=organization_id,
@@ -148,3 +164,34 @@ async def send_notification(
             user_id,
         )
         return None
+
+    # LINE delivery is optional.
+    # In-app notification must remain successful even if LINE fails.
+    try:
+        line_user_id = await get_user_line_id(
+            db=db,
+            user_id=user_id,
+        )
+
+        if line_user_id:
+            line_message = f"{title}\n\n{message}"
+
+            await send_text_message(
+                to=line_user_id,
+                text=line_message,
+            )
+
+            logging.info(
+                "LINE notification sent: user_id=%s type=%s",
+                user_id,
+                notification_type,
+            )
+
+    except Exception:
+        logging.exception(
+            "Failed to send LINE notification: user_id=%s type=%s",
+            user_id,
+            notification_type,
+        )
+
+    return notification

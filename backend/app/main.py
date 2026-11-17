@@ -18,6 +18,10 @@ from app.modules.memberships.router import router as memberships_router
 from app.modules.companies.router import router as companies_router
 from app.modules.search.router import router as search_router
 from app.modules.notifications.router import router as notifications_router
+from app.modules.invitations.router import router as invitations_router
+from app.modules.files.router import router as files_router
+from app.modules.line.router import router as line_router
+from app.modules.line.webhook import router as line_webhook_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -59,6 +63,10 @@ app.include_router(memberships_router)
 app.include_router(companies_router)
 app.include_router(search_router)
 app.include_router(notifications_router)
+app.include_router(invitations_router)
+app.include_router(files_router)
+app.include_router(line_router)
+app.include_router(line_webhook_router)
 
 @app.get("/db-version", tags=["Database"])
 async def get_db_version(

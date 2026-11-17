@@ -25,6 +25,17 @@ import { useCompanies } from "../../companies/hooks/use-companies";
 import type { Contact, ContactPayload } from "../types/contact.types";
 import type { DataTableColumn } from "../../../components/ui/data-table";
 
+import { Tags, X } from "lucide-react";
+
+import { useTags } from "../../tags/hooks/use-tags";
+import type { Tag } from "../../tags/types/tag.types";
+
+import {
+  useContactTags,
+  useAssignContactTag,
+  useUnassignContactTag,
+} from "../hooks/use-contact-tags";
+
 const initialForm: ContactPayload = {
   name: "",
   email: "",
@@ -36,6 +47,214 @@ const initialForm: ContactPayload = {
 
 function normalizeCompanyId(id: string | null | undefined) {
   return id?.replace(/^companies:/, "") ?? "";
+}
+
+interface ContactTagsModalProps {
+  contact: Contact | null;
+  tags: Tag[];
+  onClose: () => void;
+}
+
+function ContactTagsModal({ contact, tags, onClose }: ContactTagsModalProps) {
+  const { showToast } = useToast();
+
+  const {
+    data: assignments,
+    isLoading,
+    isError,
+  } = useContactTags(contact?.id ?? "");
+
+  const assignMutation = useAssignContactTag();
+  const unassignMutation = useUnassignContactTag();
+
+  const assignedTagIds = new Set(
+    (assignments ?? []).map((item) => item.tag_id),
+  );
+
+  const assignedTags = (assignments ?? [])
+    .map((item) => tags.find((tag) => tag.id === item.tag_id))
+    .filter((tag): tag is Tag => !!tag);
+
+  const availableTags = tags.filter((tag) => !assignedTagIds.has(tag.id));
+
+  async function handleAssign(tagId: string) {
+    if (!contact) return;
+
+    try {
+      await assignMutation.mutateAsync({
+        contactId: contact.id,
+        payload: { tag_id: tagId },
+      });
+
+      showToast("เพิ่ม Tag เรียบร้อยแล้ว", "success");
+    } catch {
+      showToast("ไม่สามารถเพิ่ม Tag ได้", "error");
+    }
+  }
+
+  async function handleUnassign(tagId: string) {
+    if (!contact) return;
+
+    try {
+      await unassignMutation.mutateAsync({
+        contactId: contact.id,
+        tagId,
+      });
+
+      showToast("ถอด Tag เรียบร้อยแล้ว", "success");
+    } catch {
+      showToast("ไม่สามารถถอด Tag ได้", "error");
+    }
+  }
+
+  return (
+    <Modal
+      isOpen={!!contact}
+      onClose={onClose}
+      title="จัดการ Tags"
+      description={`จัดการ Tags ของ ${contact?.name ?? ""}`}
+      size="md"
+    >
+      <div className="space-y-5 p-6">
+        <div>
+          <h3 className="mb-3 text-sm font-semibold text-slate-700">
+            Tags ปัจจุบัน
+          </h3>
+
+          {isLoading ? (
+            <p className="text-sm text-slate-500">กำลังโหลด Tags...</p>
+          ) : isError ? (
+            <p className="text-sm text-red-500">ไม่สามารถโหลด Tags ได้</p>
+          ) : assignedTags.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {assignedTags.map((tag) => (
+                <span
+                  key={tag.id}
+                  className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium"
+                  style={{
+                    backgroundColor: tag.color ?? "#e2e8f0",
+                    color: tag.color ? "#ffffff" : "#334155",
+                  }}
+                >
+                  {tag.name}
+
+                  <button
+                    type="button"
+                    onClick={() => handleUnassign(tag.id)}
+                    disabled={unassignMutation.isPending}
+                    aria-label={`ถอด ${tag.name}`}
+                  >
+                    <X size={13} />
+                  </button>
+                </span>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-slate-400">ยังไม่มี Tags</p>
+          )}
+        </div>
+
+        <div className="border-t border-slate-100 pt-4">
+          <h3 className="mb-3 text-sm font-semibold text-slate-700">
+            เพิ่ม Tag
+          </h3>
+
+          {availableTags.length > 0 ? (
+            <div className="space-y-2">
+              {availableTags.map((tag) => (
+                <div
+                  key={tag.id}
+                  className="flex items-center justify-between rounded-lg border border-slate-200 p-3"
+                >
+                  <span
+                    className="rounded-full px-3 py-1 text-xs font-medium"
+                    style={{
+                      backgroundColor: tag.color ?? "#e2e8f0",
+                      color: tag.color ? "#ffffff" : "#334155",
+                    }}
+                  >
+                    {tag.name}
+                  </span>
+
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleAssign(tag.id)}
+                    disabled={assignMutation.isPending || isLoading || isError}
+                  >
+                    เพิ่ม
+                  </Button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-slate-400">
+              {isLoading ? "กำลังโหลด..." : "ไม่มี Tags ที่สามารถเพิ่มได้"}
+            </p>
+          )}
+        </div>
+
+        <div className="flex justify-end border-t border-slate-100 pt-4">
+          <Button variant="outline" onClick={onClose}>
+            ปิด
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+interface ContactTagsCellInlineProps {
+  contact: Contact;
+  tags: Tag[];
+  onManage: () => void;
+}
+
+function ContactTagsCellInline({
+  contact,
+  tags,
+  onManage,
+}: ContactTagsCellInlineProps) {
+  const { data: assignments, isLoading, isError } = useContactTags(contact.id);
+
+  const assignedTags = (assignments ?? [])
+    .map((item) => tags.find((tag) => tag.id === item.tag_id))
+    .filter((tag): tag is Tag => !!tag);
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      {isLoading ? (
+        <span className="text-xs text-slate-400">กำลังโหลด...</span>
+      ) : isError ? (
+        <span className="text-xs text-red-500">โหลดไม่สำเร็จ</span>
+      ) : assignedTags.length > 0 ? (
+        assignedTags.map((tag) => (
+          <span
+            key={tag.id}
+            className="rounded-full px-2.5 py-1 text-xs font-medium"
+            style={{
+              backgroundColor: tag.color ?? "#e2e8f0",
+              color: tag.color ? "#ffffff" : "#334155",
+            }}
+          >
+            {tag.name}
+          </span>
+        ))
+      ) : (
+        <span className="text-xs text-slate-400">ไม่มี Tags</span>
+      )}
+
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={onManage}
+        title="จัดการ Tags"
+        aria-label={`จัดการ Tags ของ ${contact.name}`}
+      >
+        <Tags size={15} />
+      </Button>
+    </div>
+  );
 }
 
 export default function ContactsPage() {
@@ -61,6 +280,10 @@ export default function ContactsPage() {
   const totalPages = contactsQuery.data?.total_pages ?? 0;
 
   const companies = companiesQuery.data?.items ?? [];
+  const [tagContact, setTagContact] = useState<Contact | null>(null);
+
+  const { data: tagsResponse } = useTags(1, 100);
+  const availableTags = tagsResponse?.items ?? [];
 
   // ค้นหาข้อมูลในหน้าปัจจุบัน
   const filteredContacts = useMemo(() => {
@@ -229,6 +452,19 @@ export default function ContactsPage() {
       ),
     },
     {
+      key: "tags",
+      header: "Tags",
+      render: (contact) => {
+        return (
+          <ContactTagsCellInline
+            contact={contact}
+            tags={availableTags}
+            onManage={() => setTagContact(contact)}
+          />
+        );
+      },
+    },
+    {
       key: "actions",
       header: "จัดการ",
       className: "text-right",
@@ -365,10 +601,11 @@ export default function ContactsPage() {
               label="เบอร์โทรศัพท์"
               required
               type="tel"
-              pattern="^\\+?[0-9]{10,15}$"
+              pattern="^\+?[0-9]{10,15}$"
               value={form.phone}
               onChange={(event) => handleChange("phone", event.target.value)}
               placeholder="0898765432"
+              title="กรุณากรอกเบอร์โทรศัพท์เป็นตัวเลข 10-15 หลัก และสามารถมีเครื่องหมาย + นำหน้าได้"
             />
 
             <Input
@@ -421,6 +658,12 @@ export default function ContactsPage() {
           </div>
         </form>
       </Modal>
+      {/* Modal จัดการ Contact Tags */}
+      <ContactTagsModal
+        contact={tagContact}
+        tags={availableTags}
+        onClose={() => setTagContact(null)}
+      />
     </div>
   );
 }

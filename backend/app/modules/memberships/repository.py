@@ -130,19 +130,21 @@ async def get_memberships_paginated(
     offset = (page - 1) * limit
 
     result = await db.query(
-        """
-        SELECT *
-        FROM memberships
-        WHERE organization_id = $organization_id
-        ORDER BY joined_at ASC, id ASC
-        START $offset;
-        """,
-        {
-            "organization_id": organization_record,
-            "offset": offset,
-        },
-    )
-
+    """
+    SELECT
+        *,
+        user_id.name AS name,
+        user_id.email AS email
+    FROM memberships
+    WHERE organization_id = $organization_id
+    ORDER BY joined_at ASC, id ASC
+    START $offset;
+    """,
+    {
+        "organization_id": organization_record,
+        "offset": offset,
+    },
+)
     rows = extract_rows(result)
 
     return [

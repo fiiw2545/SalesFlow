@@ -239,3 +239,39 @@ async def create_notification(
     """
 
     return await db.query(query, {"data": data})
+
+
+async def get_user_line_id(
+    db: AsyncSurreal,
+    user_id: str,
+):
+    response = await db.query(
+        """
+        SELECT line_user_id
+        FROM $user_id
+        LIMIT 1
+        """,
+        {
+            "user_id": to_record_id("users", user_id),
+        },
+    )
+
+    if not isinstance(response, list):
+        return None
+
+    for item in response:
+        if not isinstance(item, dict):
+            continue
+
+        if "line_user_id" in item:
+            return item.get("line_user_id")
+
+        result = item.get("result")
+
+        if isinstance(result, list) and result:
+            return result[0].get("line_user_id")
+
+        if isinstance(result, dict):
+            return result.get("line_user_id")
+
+    return None

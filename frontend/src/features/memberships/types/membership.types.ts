@@ -3,6 +3,8 @@ export type MembershipRole = "ADMIN" | "MANAGER" | "SALES";
 export interface Membership {
   id: string;
   user_id: string;
+  name: string | null;
+  email: string | null;
   organization_id: string;
   role: MembershipRole;
   joined_at: string;

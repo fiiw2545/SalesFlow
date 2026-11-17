@@ -5,6 +5,7 @@ export interface Company {
   industry: string | null;
   phone: string | null;
   website: string | null;
+  logo_file_id: string | null;
   created_by: string;
   organization_id: string;
   created_at: string;
@@ -25,8 +26,24 @@ export interface CompanyPayload {
   industry: string | null;
   phone: string | null;
   website: string | null;
+  logo_file_id?: string | null;
 }
 
 export interface CompanyDeleteResponse {
+  message: string;
+}
+
+export interface CompanyTagAssignment {
+  id: string;
+  organization_id: string;
+  tag_id: string;
+  created_at: string;
+}
+
+export interface CompanyTagAssignmentPayload {
+  tag_id: string;
+}
+
+export interface CompanyTagDeleteResponse {
   message: string;
 }

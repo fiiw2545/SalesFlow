@@ -4,6 +4,7 @@ import axios from "axios";
 import {
   Users,
   UserPlus,
+  MailPlus,
   ShieldCheck,
   Crown,
   BriefcaseBusiness,
@@ -12,6 +13,9 @@ import {
   CalendarDays,
   RefreshCw,
   Building2,
+  Mail,
+  Clock,
+  XCircle,
 } from "lucide-react";
 
 import { useOrganization } from "../../organizations/context/organization.context";
@@ -23,11 +27,19 @@ import {
   useDeleteMembership,
 } from "../hooks/use-memberships";
 
+import {
+  useInvitations,
+  useCreateInvitation,
+  useRevokeInvitation,
+} from "../../invitations/hooks/use-invitations";
+
 import type {
   Membership,
   MembershipCreatePayload,
   MembershipRole,
 } from "../types/membership.types";
+
+import type { Invitation } from "../../invitations/types/invitation.types";
 
 import { useToast } from "../../../components/common/toast-provider";
 import Button from "../../../components/common/button";
@@ -88,7 +100,37 @@ function getRoleStyle(role: MembershipRole): string {
   }
 }
 
-function formatDate(value: string): string {
+function getInvitationStatusLabel(status: Invitation["status"]): string {
+  switch (status) {
+    case "PENDING":
+      return "รอตอบรับ";
+    case "ACCEPTED":
+      return "ตอบรับแล้ว";
+    case "REVOKED":
+      return "ยกเลิกแล้ว";
+    case "EXPIRED":
+      return "หมดอายุ";
+    default:
+      return status;
+  }
+}
+
+function getInvitationStatusStyle(status: Invitation["status"]): string {
+  switch (status) {
+    case "PENDING":
+      return "bg-amber-50 text-amber-700";
+    case "ACCEPTED":
+      return "bg-green-50 text-green-700";
+    case "REVOKED":
+      return "bg-red-50 text-red-700";
+    case "EXPIRED":
+      return "bg-slate-100 text-slate-600";
+    default:
+      return "bg-slate-100 text-slate-600";
+  }
+}
+
+function formatDate(value: string | null | undefined): string {
   if (!value) {
     return "-";
   }
@@ -115,19 +157,26 @@ function MembersPage() {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
 
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  // Add existing user modal
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [userId, setUserId] = useState("");
   const [newRole, setNewRole] = useState<MembershipRole>("SALES");
-  const [formError, setFormError] = useState("");
+  const [addFormError, setAddFormError] = useState("");
+
+  // Invitation modal
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState<MembershipRole>("SALES");
+  const [inviteFormError, setInviteFormError] = useState("");
 
   const [roleDrafts, setRoleDrafts] = useState<Record<string, MembershipRole>>(
     {},
   );
 
   const organizationId = activeOrganization?.id;
-
   const isAdmin = activeOrganization?.role === "ADMIN";
 
+  // Membership queries
   const { data, isLoading, isError, refetch, isFetching } = useMemberships(
     organizationId,
     page,
@@ -142,6 +191,21 @@ function MembersPage() {
   const updateMutation = useUpdateMembership(organizationId);
   const deleteMutation = useDeleteMembership(organizationId);
 
+  // Invitation queries
+  const {
+    data: invitationData,
+    isLoading: isInvitationLoading,
+    isError: isInvitationError,
+    refetch: refetchInvitations,
+    isFetching: isInvitationFetching,
+  } = useInvitations(organizationId);
+
+  const invitations = invitationData?.items ?? [];
+  const invitationTotal = invitationData?.total ?? 0;
+
+  const createInvitationMutation = useCreateInvitation(organizationId);
+  const revokeInvitationMutation = useRevokeInvitation(organizationId);
+
   useEffect(() => {
     if (totalPages > 0 && page > totalPages) {
       setPage(totalPages);
@@ -150,46 +214,32 @@ function MembersPage() {
     }
   }, [page, totalPages]);
 
-  function openModal() {
+  // Add existing member
+  function openAddModal() {
     setUserId("");
     setNewRole("SALES");
-    setFormError("");
-    setIsModalOpen(true);
+    setAddFormError("");
+    setIsAddModalOpen(true);
   }
 
-  function closeModal() {
-    setIsModalOpen(false);
+  function closeAddModal() {
+    setIsAddModalOpen(false);
     setUserId("");
     setNewRole("SALES");
-    setFormError("");
-  }
-
-  function handleOrganizationChange(organizationId: string) {
-    const selectedOrganization = organizations.find(
-      (organization) => organization.id === organizationId,
-    );
-
-    if (!selectedOrganization) {
-      return;
-    }
-
-    setActiveOrganization(selectedOrganization.id);
-    setRoleDrafts({});
-    setPage(1);
-    closeModal();
+    setAddFormError("");
   }
 
   function handleCreate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setFormError("");
+    setAddFormError("");
 
     if (!activeOrganization) {
-      setFormError("กรุณาเลือกองค์กรก่อนเพิ่มสมาชิก");
+      setAddFormError("กรุณาเลือกองค์กรก่อนเพิ่มสมาชิก");
       return;
     }
 
     if (!isAdmin) {
-      setFormError("เฉพาะผู้ดูแลระบบเท่านั้นที่เพิ่มสมาชิกได้");
+      setAddFormError("เฉพาะผู้ดูแลระบบเท่านั้นที่เพิ่มสมาชิกได้");
       return;
     }
 
@@ -199,7 +249,7 @@ function MembersPage() {
     };
 
     if (!payload.user_id) {
-      setFormError("กรุณากรอก User ID");
+      setAddFormError("กรุณากรอก User ID");
       return;
     }
 
@@ -207,16 +257,101 @@ function MembersPage() {
       onSuccess: () => {
         showToast("เพิ่มสมาชิกเรียบร้อยแล้ว", "success");
         setPage(1);
-        closeModal();
+        closeAddModal();
       },
       onError: (error) => {
         const message = getErrorMessage(error);
-        setFormError(message);
+        setAddFormError(message);
         showToast(message, "error");
       },
     });
   }
 
+  // Create invitation
+  function openInviteModal() {
+    setInviteEmail("");
+    setInviteRole("SALES");
+    setInviteFormError("");
+    setIsInviteModalOpen(true);
+  }
+
+  function closeInviteModal() {
+    setIsInviteModalOpen(false);
+    setInviteEmail("");
+    setInviteRole("SALES");
+    setInviteFormError("");
+  }
+
+  function handleCreateInvitation(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setInviteFormError("");
+
+    if (!activeOrganization) {
+      setInviteFormError("กรุณาเลือกองค์กรก่อนส่งคำเชิญ");
+      return;
+    }
+
+    if (!isAdmin) {
+      setInviteFormError("เฉพาะผู้ดูแลระบบเท่านั้นที่เชิญสมาชิกได้");
+      return;
+    }
+
+    const email = inviteEmail.trim().toLowerCase();
+
+    if (!email) {
+      setInviteFormError("กรุณากรอก Email");
+      return;
+    }
+
+    createInvitationMutation.mutate(
+      {
+        email,
+        role: inviteRole,
+      },
+      {
+        onSuccess: () => {
+          showToast("ส่งคำเชิญเรียบร้อยแล้ว", "success");
+          closeInviteModal();
+        },
+        onError: (error) => {
+          const message = getErrorMessage(error);
+          setInviteFormError(message);
+          showToast(message, "error");
+        },
+      },
+    );
+  }
+
+  // Revoke invitation
+  function handleRevokeInvitation(invitation: Invitation) {
+    if (!isAdmin) {
+      showToast("เฉพาะผู้ดูแลระบบเท่านั้นที่ยกเลิกคำเชิญได้", "error");
+      return;
+    }
+
+    if (invitation.status !== "PENDING") {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `ต้องการยกเลิกคำเชิญของ ${invitation.email} ใช่หรือไม่?`,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    revokeInvitationMutation.mutate(invitation.id, {
+      onSuccess: () => {
+        showToast("ยกเลิกคำเชิญเรียบร้อยแล้ว", "success");
+      },
+      onError: (error) => {
+        showToast(getErrorMessage(error), "error");
+      },
+    });
+  }
+
+  // Membership role management
   function handleRoleChange(membershipId: string, role: MembershipRole) {
     setRoleDrafts((current) => ({
       ...current,
@@ -265,7 +400,9 @@ function MembersPage() {
     }
 
     const confirmed = window.confirm(
-      `ต้องการนำสมาชิก ${member.user_id} ออกจากองค์กรใช่หรือไม่?`,
+      `ต้องการนำสมาชิก ${
+        member.name || member.email || member.user_id
+      } ออกจากองค์กรใช่หรือไม่?`,
     );
 
     if (!confirmed) {
@@ -282,12 +419,30 @@ function MembersPage() {
     });
   }
 
+  // Organization switching
+  function handleOrganizationChange(organizationId: string) {
+    const selectedOrganization = organizations.find(
+      (organization) => organization.id === organizationId,
+    );
+
+    if (!selectedOrganization) {
+      return;
+    }
+
+    setActiveOrganization(selectedOrganization.id);
+    setRoleDrafts({});
+    setPage(1);
+    closeAddModal();
+    closeInviteModal();
+  }
+
+  // No organization selected
   if (!activeOrganization) {
     return (
       <div className="space-y-6">
         <PageHeader
           title="สมาชิก"
-          description="จัดการสมาชิกและบทบาทภายในองค์กร"
+          description="จัดการสมาชิกและคำเชิญภายในองค์กร"
         />
 
         {organizations.length > 0 && (
@@ -335,6 +490,7 @@ function MembersPage() {
 
   return (
     <div className="space-y-6">
+      {/* Organization selector */}
       <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
@@ -368,19 +524,28 @@ function MembersPage() {
         )}
       </div>
 
+      {/* Page header and actions */}
       <PageHeader
         title="สมาชิก"
         description={`จัดการสมาชิกขององค์กร ${activeOrganization.name}`}
         action={
           isAdmin ? (
-            <Button onClick={openModal}>
-              <UserPlus size={18} />
-              เพิ่มสมาชิก
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" onClick={openAddModal}>
+                <UserPlus size={18} />
+                เพิ่มสมาชิก
+              </Button>
+
+              <Button onClick={openInviteModal}>
+                <MailPlus size={18} />
+                เชิญสมาชิก
+              </Button>
+            </div>
           ) : undefined
         }
       />
 
+      {/* Statistics */}
       <div className="grid gap-4 sm:grid-cols-3">
         <StatCard
           icon={<Users size={20} />}
@@ -395,12 +560,13 @@ function MembersPage() {
         />
 
         <StatCard
-          icon={<BriefcaseBusiness size={20} />}
-          label="สมาชิกทั่วไปในหน้านี้"
-          value={members.filter((member) => member.role !== "ADMIN").length}
+          icon={<Mail size={20} />}
+          label="คำเชิญที่รอตอบรับ"
+          value={invitations.filter((item) => item.status === "PENDING").length}
         />
       </div>
 
+      {/* Members table */}
       <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
         <div className="flex flex-col gap-3 border-b border-slate-100 p-5 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -444,14 +610,13 @@ function MembersPage() {
             <p className="mt-3 font-medium text-slate-900">ยังไม่มีสมาชิก</p>
 
             <p className="mt-1 text-sm text-slate-500">
-              เพิ่มสมาชิกเพื่อเริ่มทำงานร่วมกันในองค์กร
+              เพิ่มสมาชิกหรือส่งคำเชิญเพื่อเริ่มทำงานร่วมกัน
             </p>
           </div>
         ) : (
           <div className="divide-y divide-slate-100">
             {members.map((member) => {
               const selectedRole = roleDrafts[member.id] ?? member.role;
-
               const hasRoleChanged = selectedRole !== member.role;
 
               return (
@@ -466,12 +631,14 @@ function MembersPage() {
 
                     <div className="min-w-0 flex-1">
                       <p className="break-all font-medium text-slate-900">
-                        {member.user_id}
+                        {member.name || member.email || "ไม่พบข้อมูลผู้ใช้"}
                       </p>
 
-                      <p className="mt-1 text-xs text-slate-500">
-                        Membership ID: {member.id}
-                      </p>
+                      {member.email && member.name && (
+                        <p className="mt-1 break-all text-sm text-slate-500">
+                          {member.email}
+                        </p>
+                      )}
 
                       <p className="mt-2 flex items-center gap-1.5 text-xs text-slate-500">
                         <CalendarDays size={13} />
@@ -484,7 +651,9 @@ function MembersPage() {
                     {isAdmin ? (
                       <>
                         <select
-                          aria-label={`บทบาทของ ${member.user_id}`}
+                          aria-label={`บทบาทของ ${
+                            member.name || member.email || member.user_id
+                          }`}
                           value={selectedRole}
                           onChange={(event) =>
                             handleRoleChange(
@@ -555,17 +724,135 @@ function MembersPage() {
         )}
       </div>
 
+      {/* Invitations table */}
+      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+        <div className="flex flex-col gap-3 border-b border-slate-100 p-5 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="font-semibold text-slate-900">รายการคำเชิญ</h2>
+
+            <p className="mt-1 text-sm text-slate-500">
+              คำเชิญทั้งหมด {invitationTotal} รายการ
+            </p>
+          </div>
+
+          <Button
+            variant="outline"
+            onClick={() => refetchInvitations()}
+            disabled={isInvitationFetching}
+          >
+            <RefreshCw
+              size={16}
+              className={isInvitationFetching ? "animate-spin" : ""}
+            />
+            รีเฟรช
+          </Button>
+        </div>
+
+        {isInvitationLoading ? (
+          <div className="flex min-h-[180px] items-center justify-center">
+            <LoaderCircle className="animate-spin text-blue-600" size={28} />
+          </div>
+        ) : isInvitationError ? (
+          <div className="p-8 text-center">
+            <p className="text-sm text-red-600">โหลดรายการคำเชิญไม่สำเร็จ</p>
+
+            <Button
+              variant="outline"
+              className="mt-3"
+              onClick={() => refetchInvitations()}
+            >
+              ลองอีกครั้ง
+            </Button>
+          </div>
+        ) : invitations.length === 0 ? (
+          <div className="px-6 py-10 text-center">
+            <Mail className="mx-auto text-slate-300" size={36} />
+
+            <p className="mt-3 font-medium text-slate-900">ยังไม่มีคำเชิญ</p>
+
+            <p className="mt-1 text-sm text-slate-500">
+              คำเชิญที่ส่งให้ผู้ใช้งานจะแสดงที่นี่
+            </p>
+          </div>
+        ) : (
+          <div className="divide-y divide-slate-100">
+            {invitations.map((invitation) => (
+              <div
+                key={invitation.id}
+                className="flex flex-col gap-4 p-5 lg:flex-row lg:items-center"
+              >
+                <div className="flex min-w-0 flex-1 items-start gap-3">
+                  <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-indigo-50 text-indigo-600">
+                    <Mail size={18} />
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <p className="break-all font-medium text-slate-900">
+                      {invitation.email}
+                    </p>
+
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <span
+                        className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${getRoleStyle(
+                          invitation.role,
+                        )}`}
+                      >
+                        {getRoleLabel(invitation.role)}
+                      </span>
+
+                      <span
+                        className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${getInvitationStatusStyle(
+                          invitation.status,
+                        )}`}
+                      >
+                        {getInvitationStatusLabel(invitation.status)}
+                      </span>
+                    </div>
+
+                    <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
+                      <span className="flex items-center gap-1">
+                        <CalendarDays size={13} />
+                        ส่งเมื่อ {formatDate(invitation.created_at)}
+                      </span>
+
+                      <span className="flex items-center gap-1">
+                        <Clock size={13} />
+                        หมดอายุ {formatDate(invitation.expires_at)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {isAdmin && invitation.status === "PENDING" && (
+                  <Button
+                    size="sm"
+                    variant="danger"
+                    disabled={revokeInvitationMutation.isPending}
+                    loading={revokeInvitationMutation.isPending}
+                    onClick={() => handleRevokeInvitation(invitation)}
+                  >
+                    <XCircle size={15} />
+                    ยกเลิกคำเชิญ
+                  </Button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       {!isAdmin && (
         <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
           <ShieldCheck className="mr-2 inline-block" size={17} />
-          เฉพาะผู้ดูแลระบบเท่านั้นที่สามารถเพิ่ม เปลี่ยนบทบาท
+          เฉพาะผู้ดูแลระบบเท่านั้นที่สามารถเพิ่มสมาชิก เชิญสมาชิก เปลี่ยนบทบาท
           หรือนำสมาชิกออกจากองค์กรได้
         </div>
       )}
 
+      {/* Add existing member modal */}
       <Modal
-        isOpen={isModalOpen}
-        onClose={closeModal}
+        isOpen={isAddModalOpen}
+        onClose={closeAddModal}
         title="เพิ่มสมาชิก"
         description="เพิ่มผู้ใช้ที่มีบัญชีอยู่ในระบบเข้ามาเป็นสมาชิกขององค์กร"
         size="md"
@@ -606,9 +893,9 @@ function MembersPage() {
             </select>
           </div>
 
-          {formError && (
+          {addFormError && (
             <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              {formError}
+              {addFormError}
             </div>
           )}
 
@@ -616,7 +903,7 @@ function MembersPage() {
             <Button
               type="button"
               variant="outline"
-              onClick={closeModal}
+              onClick={closeAddModal}
               disabled={createMutation.isPending}
             >
               ยกเลิก
@@ -629,6 +916,83 @@ function MembersPage() {
             >
               <UserPlus size={16} />
               เพิ่มสมาชิก
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Invitation modal */}
+      <Modal
+        isOpen={isInviteModalOpen}
+        onClose={closeInviteModal}
+        title="เชิญสมาชิก"
+        description="ส่งคำเชิญทาง Email เพื่อให้ผู้ใช้งานเข้าร่วมองค์กร"
+        size="md"
+      >
+        <form onSubmit={handleCreateInvitation} className="space-y-4 p-6">
+          <Input
+            label="Email"
+            name="email"
+            type="email"
+            required
+            value={inviteEmail}
+            onChange={(event) => setInviteEmail(event.target.value)}
+            placeholder="example@email.com"
+            helperText="ระบบจะส่งลิงก์คำเชิญไปยัง Email นี้"
+          />
+
+          <div>
+            <label
+              htmlFor="invite-member-role"
+              className="mb-2 block text-sm font-medium text-slate-700"
+            >
+              บทบาทสมาชิก
+            </label>
+
+            <select
+              id="invite-member-role"
+              value={inviteRole}
+              onChange={(event) =>
+                setInviteRole(event.target.value as MembershipRole)
+              }
+              className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+            >
+              {roleOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {inviteFormError && (
+            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {inviteFormError}
+            </div>
+          )}
+
+          <div className="rounded-lg border border-blue-100 bg-blue-50 p-3 text-sm text-blue-700">
+            คำเชิญจะมีอายุ 7 วัน
+            ผู้รับต้องยอมรับคำเชิญก่อนจึงจะเป็นสมาชิกขององค์กร
+          </div>
+
+          <div className="flex justify-end gap-3 border-t border-slate-100 pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={closeInviteModal}
+              disabled={createInvitationMutation.isPending}
+            >
+              ยกเลิก
+            </Button>
+
+            <Button
+              type="submit"
+              loading={createInvitationMutation.isPending}
+              disabled={createInvitationMutation.isPending}
+            >
+              <MailPlus size={16} />
+              ส่งคำเชิญ
             </Button>
           </div>
         </form>

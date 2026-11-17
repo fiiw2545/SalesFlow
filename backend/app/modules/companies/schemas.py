@@ -1,4 +1,6 @@
+
 from datetime import datetime
+
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -10,6 +12,7 @@ class CompanyCreate(BaseModel):
     industry: str | None = None
     phone: str | None = None
     website: str | None = None
+    logo_file_id: str | None = None
 
 
 class CompanyUpdate(BaseModel):
@@ -20,6 +23,7 @@ class CompanyUpdate(BaseModel):
     industry: str | None = None
     phone: str | None = None
     website: str | None = None
+    logo_file_id: str | None = None
 
 
 class CompanyResponse(BaseModel):
@@ -29,6 +33,7 @@ class CompanyResponse(BaseModel):
     industry: str | None = None
     phone: str | None = None
     website: str | None = None
+    logo_file_id: str | None = None
     created_by: str
     organization_id: str
     created_at: datetime

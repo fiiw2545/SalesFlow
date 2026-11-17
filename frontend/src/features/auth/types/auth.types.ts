@@ -2,6 +2,7 @@ export interface AuthUser {
   id: string;
   name: string;
   email: string;
+  avatar_file_id: string | null;
 }
 
 export interface AuthResponse {

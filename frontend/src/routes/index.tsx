@@ -20,6 +20,8 @@ import NotePage from "../features/notes/pages/notes.page";
 import TagsPage from "../features/tags/pages/tags.page";
 import OrganizationPage from "../features/organizations/pages/organization-page";
 import MembersPage from "../features/memberships/pages/members-page";
+import AcceptInvitationPage from "../features/invitations/pages/accept-invitation.page";
+import FilesPage from "../features/files/pages/files.page";
 
 const router = createBrowserRouter([
   {
@@ -29,6 +31,10 @@ const router = createBrowserRouter([
   {
     path: "/register",
     element: <RegisterPage />,
+  },
+  {
+    path: "/accept-invitation",
+    element: <AcceptInvitationPage />,
   },
   {
     element: <ProtectedRoute />,
@@ -87,6 +93,10 @@ const router = createBrowserRouter([
           {
             path: "/members",
             element: <MembersPage />,
+          },
+          {
+            path: "/files",
+            element: <FilesPage />,
           },
         ],
       },
