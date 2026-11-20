@@ -1,0 +1,85 @@
+name: Backend CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements-dev.txt
+
+      - name: Install dependencies
+        working-directory: backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: Create test environment
+        working-directory: backend
+        run: |
+          cat > .env.test <<'EOF'
+          SURREALDB_URL=ws://localhost:8002
+          SURREALDB_USERNAME=root
+          SURREALDB_PASSWORD=ci-test-password
+          SURREALDB_NAMESPACE=salesflow_test
+          SURREALDB_DATABASE=crm_test
+          JWT_SECRET_KEY=ci-only-test-secret-key-not-for-production
+          JWT_ALGORITHM=HS256
+          ACCESS_TOKEN_EXPIRE_MINUTES=15
+          REFRESH_TOKEN_EXPIRE_DAYS=7
+          RESEND_API_KEY=re_test_placeholder
+          RESEND_FROM_EMAIL=test@example.com
+          FILEBASE_ENDPOINT=https://s3.filebase.io
+          FILEBASE_REGION=auto
+          FILEBASE_BUCKET=ci-test-bucket
+          FILEBASE_ACCESS_KEY=ci-test-access-key
+          FILEBASE_SECRET_KEY=ci-test-secret-key
+          FILE_MAX_SIZE_MB=10
+          LINE_CHANNEL_ACCESS_TOKEN=ci-test-line-token
+          LINE_CHANNEL_SECRET=ci-test-line-secret
+          LINE_TEST_USER_ID=U00000000000000000000000000000000
+          FRONTEND_URL=http://localhost:5173
+          APP_ENV=testing
+          EOF
+
+      - name: Start SurrealDB
+        run: |
+          docker run -d \
+            --name surrealdb \
+            -p 8002:8000 \
+            -e SURREAL_USER=root \
+            -e SURREAL_PASS=ci-test-password \
+            surrealdb/surrealdb:v3.3.5 \
+            start --bind 0.0.0.0:8000 memory
+
+          for i in {1..30}; do
+            if docker exec surrealdb /surreal isready --endpoint http://localhost:8000; then
+              exit 0
+            fi
+            sleep 2
+          done
+
+          docker logs surrealdb
+          exit 1
+
+      - name: Run backend tests
+        working-directory: backend
+        run: |
+          python -m pytest \
+            --cov=app \
+            --cov-report=term-missing
