@@ -1,40 +1,77 @@
+import { lazy, Suspense } from "react";
 import { createBrowserRouter } from "react-router";
 
-import App from "../App";
 import MainLayout from "../layouts/main-layout";
-
-import LoginPage from "../features/auth/pages/login.page";
-import RegisterPage from "../features/auth/pages/register.page";
-import MyAccountPage from "../features/auth/pages/my-account.page";
 import ProtectedRoute from "../features/auth/routes/protected-route";
-import NotFoundPage from "../pages/not-found.page";
-import ForbiddenPage from "../pages/forbidden.page";
-import CompaniesPage from "../features/companies/pages/companies.page";
-import ContactsPage from "../features/contacts/pages/contacts.page";
-import PipelinesPage from "../features/pipelines/pages/pipelines.page";
-import StagesPage from "../features/pipelines/pages/stages.page";
-import DealPage from "../features/deals/pages/deals.page";
-import ActivatePage from "../features/activities/pages/activities.page";
-import TasksPage from "../features/tasks/pages/tasks.page";
-import NotePage from "../features/notes/pages/notes.page";
-import TagsPage from "../features/tags/pages/tags.page";
-import OrganizationPage from "../features/organizations/pages/organization-page";
-import MembersPage from "../features/memberships/pages/members-page";
-import AcceptInvitationPage from "../features/invitations/pages/accept-invitation.page";
-import FilesPage from "../features/files/pages/files.page";
+
+const App = lazy(() => import("../App"));
+
+const LoginPage = lazy(() => import("../features/auth/pages/login.page"));
+const RegisterPage = lazy(() => import("../features/auth/pages/register.page"));
+const MyAccountPage = lazy(
+  () => import("../features/auth/pages/my-account.page"),
+);
+
+const NotFoundPage = lazy(() => import("../pages/not-found.page"));
+const ForbiddenPage = lazy(() => import("../pages/forbidden.page"));
+
+const CompaniesPage = lazy(
+  () => import("../features/companies/pages/companies.page"),
+);
+const ContactsPage = lazy(
+  () => import("../features/contacts/pages/contacts.page"),
+);
+const PipelinesPage = lazy(
+  () => import("../features/pipelines/pages/pipelines.page"),
+);
+const StagesPage = lazy(
+  () => import("../features/pipelines/pages/stages.page"),
+);
+const DealPage = lazy(() => import("../features/deals/pages/deals.page"));
+const ActivatePage = lazy(
+  () => import("../features/activities/pages/activities.page"),
+);
+const TasksPage = lazy(() => import("../features/tasks/pages/tasks.page"));
+const NotePage = lazy(() => import("../features/notes/pages/notes.page"));
+const TagsPage = lazy(() => import("../features/tags/pages/tags.page"));
+const OrganizationPage = lazy(
+  () => import("../features/organizations/pages/organization-page"),
+);
+const MembersPage = lazy(
+  () => import("../features/memberships/pages/members-page"),
+);
+const AcceptInvitationPage = lazy(
+  () => import("../features/invitations/pages/accept-invitation.page"),
+);
+const FilesPage = lazy(() => import("../features/files/pages/files.page"));
+
+function RouteFallback() {
+  return (
+    <div className="flex min-h-[50vh] items-center justify-center">
+      <div className="flex items-center gap-3">
+        <div className="h-5 w-5 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
+        <p className="text-sm text-slate-500">กำลังโหลดหน้า...</p>
+      </div>
+    </div>
+  );
+}
+
+function withSuspense(element: React.ReactNode) {
+  return <Suspense fallback={<RouteFallback />}>{element}</Suspense>;
+}
 
 const router = createBrowserRouter([
   {
     path: "/login",
-    element: <LoginPage />,
+    element: withSuspense(<LoginPage />),
   },
   {
     path: "/register",
-    element: <RegisterPage />,
+    element: withSuspense(<RegisterPage />),
   },
   {
     path: "/accept-invitation",
-    element: <AcceptInvitationPage />,
+    element: withSuspense(<AcceptInvitationPage />),
   },
   {
     element: <ProtectedRoute />,
@@ -44,71 +81,71 @@ const router = createBrowserRouter([
         children: [
           {
             path: "/",
-            element: <App />,
+            element: withSuspense(<App />),
           },
           {
             path: "/my-account",
-            element: <MyAccountPage />,
+            element: withSuspense(<MyAccountPage />),
           },
           {
             path: "/companies",
-            element: <CompaniesPage />,
+            element: withSuspense(<CompaniesPage />),
           },
           {
             path: "/contacts",
-            element: <ContactsPage />,
+            element: withSuspense(<ContactsPage />),
           },
           {
             path: "/deals",
-            element: <DealPage />,
+            element: withSuspense(<DealPage />),
           },
           {
             path: "/tasks",
-            element: <TasksPage />,
+            element: withSuspense(<TasksPage />),
           },
           {
             path: "/activities",
-            element: <ActivatePage />,
+            element: withSuspense(<ActivatePage />),
           },
           {
             path: "/notes",
-            element: <NotePage />,
+            element: withSuspense(<NotePage />),
           },
           {
             path: "/pipelines",
-            element: <PipelinesPage />,
+            element: withSuspense(<PipelinesPage />),
           },
           {
             path: "/pipelines/:pipelineId/stages",
-            element: <StagesPage />,
+            element: withSuspense(<StagesPage />),
           },
           {
             path: "/tags",
-            element: <TagsPage />,
+            element: withSuspense(<TagsPage />),
           },
           {
             path: "/organization",
-            element: <OrganizationPage />,
+            element: withSuspense(<OrganizationPage />),
           },
           {
             path: "/members",
-            element: <MembersPage />,
+            element: withSuspense(<MembersPage />),
           },
           {
             path: "/files",
-            element: <FilesPage />,
+            element: withSuspense(<FilesPage />),
           },
         ],
       },
       {
         path: "/forbidden",
-        element: <ForbiddenPage />,
+        element: withSuspense(<ForbiddenPage />),
       },
     ],
   },
   {
     path: "*",
-    element: <NotFoundPage />,
+    element: withSuspense(<NotFoundPage />),
   },
 ]);
 

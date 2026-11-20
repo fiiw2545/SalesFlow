@@ -22,6 +22,7 @@ from app.modules.invitations.router import router as invitations_router
 from app.modules.files.router import router as files_router
 from app.modules.line.router import router as line_router
 from app.modules.line.webhook import router as line_webhook_router
+from app.core.config import APP_ENV, FRONTEND_URL
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -41,9 +42,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-    ],
+    allow_origins=[FRONTEND_URL],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -68,32 +67,34 @@ app.include_router(files_router)
 app.include_router(line_router)
 app.include_router(line_webhook_router)
 
-@app.get("/db-version", tags=["Database"])
-async def get_db_version(
-    db: AsyncSurreal = Depends(get_db)
-):
-    info = await db.query("INFO FOR DB;")
-    version = await db.version()
+if APP_ENV != "production":
 
-    return {
-        "message": "Database connection successful",
-        "version": version,
-        "database_info": info
-    }
+    @app.get("/db-version", tags=["Database"])
+    async def get_db_version(
+        db: AsyncSurreal = Depends(get_db)
+    ):
+        info = await db.query("INFO FOR DB;")
+        version = await db.version()
 
-@app.get("/db-info", tags=["Database"])
-async def get_db_info(
-    db: AsyncSurreal = Depends(get_db)
-):
-    database_info = await db.query(
-        "INFO FOR DB"
-    )
+        return {
+            "message": "Database connection successful",
+            "version": version,
+            "database_info": info
+        }
 
-    contacts = await db.query(
-        "SELECT * FROM contacts"
-    )
+    @app.get("/db-info", tags=["Database"])
+    async def get_db_info(
+        db: AsyncSurreal = Depends(get_db)
+    ):
+        database_info = await db.query(
+            "INFO FOR DB"
+        )
 
-    return {
-        "database_info": database_info,
-        "contacts": contacts
-    }
+        contacts = await db.query(
+            "SELECT * FROM contacts"
+        )
+
+        return {
+            "database_info": database_info,
+            "contacts": contacts
+        }

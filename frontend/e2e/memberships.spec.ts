@@ -32,11 +32,15 @@ test.describe("Memberships E2E", () => {
   test("should load invitations and display invitation list", async ({
     page,
   }) => {
-    const invitationsResponsePromise = page.waitForResponse(
-      (response) =>
-        response.url().includes("/invitations/") &&
-        response.request().method() === "GET",
-    );
+    const invitationsResponsePromise = page.waitForResponse((response) => {
+      const url = new URL(response.url());
+
+      return (
+        url.origin === "http://localhost:8000" &&
+        url.pathname === "/invitations/" &&
+        response.request().method() === "GET"
+      );
+    });
 
     await page.goto("/members");
 
@@ -63,13 +67,21 @@ test.describe("Memberships E2E", () => {
 
       await expect(invitationRows).toHaveCount(invitationData.items.length);
 
-      for (const invitation of invitationData.items) {
-        const invitationRow = invitationRows.filter({
-          hasText: invitation.email,
-        });
+      const statusLabels: Record<string, string> = {
+        PENDING: "รอตอบรับ",
+        ACCEPTED: "ตอบรับแล้ว",
+        REVOKED: "ยกเลิกแล้ว",
+        EXPIRED: "หมดอายุ",
+      };
 
-        await expect(invitationRow).toHaveCount(1);
+      for (const [index, invitation] of invitationData.items.entries()) {
+        const invitationRow = invitationRows.nth(index);
+
         await expect(invitationRow).toBeVisible();
+        await expect(invitationRow).toContainText(invitation.email);
+        await expect(invitationRow).toContainText(
+          statusLabels[invitation.status] ?? invitation.status,
+        );
 
         if (invitation.status !== "PENDING") {
           await expect(invitationRow.locator("button")).toHaveCount(0);
