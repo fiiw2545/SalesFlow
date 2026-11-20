@@ -33,7 +33,7 @@ async def validate_company_logo(
 
     if file_metadata.get("category") != "IMAGE":
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Company logo must be an image",
         )
 
@@ -101,7 +101,7 @@ async def create_new_company(
 
     if not name:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Company name cannot be empty",
         )
 
@@ -163,7 +163,7 @@ async def update_existing_company(
     if "name" in data:
         if data["name"] is None:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail="Company name cannot be null",
             )
 
@@ -171,7 +171,7 @@ async def update_existing_company(
 
         if not name:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail="Company name cannot be empty",
             )
 

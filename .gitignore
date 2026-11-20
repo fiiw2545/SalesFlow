@@ -40,3 +40,11 @@ backend/venv/
 # Python Cache
 **/__pycache__/
 **/*.py[cod]
+
+# Test Results
+test-results/
+playwright-report/
+coverage/
+
+# Playwright
+playwright/.cache/

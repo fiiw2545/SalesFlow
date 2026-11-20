@@ -62,7 +62,7 @@ async def get_contact_by_id(
         WHERE organization_id = $organization_id
         """,
         {
-            "id": contact_id,
+            "id": contact_id.replace("contacts:", ""),
             "organization_id": organization_record_id
         }
     )
@@ -144,7 +144,7 @@ async def update_contact(
         WHERE organization_id = $organization_id
         """,
         {
-            "id": contact_id,
+            "id": contact_id.replace("contacts:", ""),
             "data": data,
             "organization_id": organization_record_id
         }
@@ -168,7 +168,7 @@ async def delete_contact(
         RETURN BEFORE
         """,
         {
-            "id": contact_id,
+            "id": contact_id.replace("contacts:", ""),
             "organization_id": organization_record_id
         }
     )

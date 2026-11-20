@@ -245,14 +245,14 @@ async def get_contact_by_id(
 ):
     query = """
         SELECT *
-        FROM $contact_id
+        FROM type::record('contacts', $id)
         WHERE organization_id = $organization_id;
     """
 
     result = await db.query(
         query,
         {
-            "contact_id": to_record_id("contacts", contact_id),
+            "id": contact_id.split(":", 1)[-1],
             "organization_id": to_record_id(
                 "organizations",
                 organization_id,

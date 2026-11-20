@@ -49,7 +49,7 @@ def handle_service_error(error):
 
     if isinstance(error, ValueError):
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=str(error),
         )
 
