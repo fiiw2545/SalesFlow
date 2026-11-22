@@ -23,6 +23,27 @@ DEFINE INDEX activities_contact_idx ON activities FIELDS contact_id;
 DEFINE INDEX activities_deal_idx ON activities FIELDS deal_id;
 DEFINE INDEX activities_org_idx ON activities FIELDS organization_id;
 
+-- ------------------------------
+-- TABLE: files
+-- ------------------------------
+
+DEFINE TABLE files TYPE NORMAL SCHEMAFULL PERMISSIONS NONE;
+
+DEFINE FIELD OVERWRITE category ON files TYPE string PERMISSIONS FULL;
+DEFINE FIELD OVERWRITE content_type ON files TYPE string PERMISSIONS FULL;
+DEFINE FIELD OVERWRITE created_at ON files TYPE datetime PERMISSIONS FULL;
+DEFINE FIELD OVERWRITE extension ON files TYPE string PERMISSIONS FULL;
+DEFINE FIELD OVERWRITE organization_id ON files TYPE none | record<organizations> PERMISSIONS FULL;
+DEFINE FIELD OVERWRITE original_name ON files TYPE string PERMISSIONS FULL;
+DEFINE FIELD OVERWRITE owner_user_id ON files TYPE none | record<users> PERMISSIONS FULL;
+DEFINE FIELD OVERWRITE size ON files TYPE int PERMISSIONS FULL;
+DEFINE FIELD OVERWRITE storage_key ON files TYPE string PERMISSIONS FULL;
+DEFINE FIELD OVERWRITE updated_at ON files TYPE datetime PERMISSIONS FULL;
+DEFINE FIELD OVERWRITE uploaded_by ON files TYPE record<users> PERMISSIONS FULL;
+
+DEFINE INDEX files_org_idx ON files FIELDS organization_id;
+DEFINE INDEX files_owner_user_idx ON files FIELDS owner_user_id;
+
 
 -- ------------------------------
 -- TABLE: companies
@@ -34,6 +55,7 @@ DEFINE FIELD OVERWRITE address ON companies TYPE none | string PERMISSIONS FULL;
 DEFINE FIELD OVERWRITE created_at ON companies TYPE datetime DEFAULT time::now() PERMISSIONS FULL;
 DEFINE FIELD OVERWRITE created_by ON companies TYPE record<users> PERMISSIONS FULL;
 DEFINE FIELD OVERWRITE industry ON companies TYPE none | string PERMISSIONS FULL;
+DEFINE FIELD OVERWRITE logo_file_id ON companies TYPE none | record<files> PERMISSIONS FULL;
 DEFINE FIELD OVERWRITE name ON companies TYPE string PERMISSIONS FULL;
 DEFINE FIELD OVERWRITE organization_id ON companies TYPE record<organizations> PERMISSIONS FULL;
 DEFINE FIELD OVERWRITE phone ON companies TYPE none | string PERMISSIONS FULL;
@@ -252,6 +274,7 @@ DEFINE FIELD OVERWRITE is_active ON users TYPE bool DEFAULT true PERMISSIONS FUL
 DEFINE FIELD OVERWRITE name ON users TYPE string PERMISSIONS FULL;
 DEFINE FIELD OVERWRITE password_hash ON users TYPE string PERMISSIONS FULL;
 DEFINE FIELD OVERWRITE updated_at ON users TYPE none | datetime PERMISSIONS FULL;
+DEFINE FIELD OVERWRITE avatar_file_id ON users TYPE none | record<files> PERMISSIONS FULL;
 
 DEFINE INDEX users_email_unique ON users FIELDS email UNIQUE;
 
