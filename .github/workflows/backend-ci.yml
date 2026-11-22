@@ -77,6 +77,18 @@ jobs:
           docker logs surrealdb
           exit 1
 
+      - name: Initialize database schema
+        run: |
+          docker cp backend/app/database/schema.surql surrealdb:/tmp/schema.surql
+
+          docker exec surrealdb /surreal import \
+            --endpoint http://localhost:8000 \
+            --username root \
+            --password ci-test-password \
+            --namespace salesflow_test \
+            --database crm_test \
+            /tmp/schema.surql
+
       - name: Run backend tests
         working-directory: backend
         run: |
