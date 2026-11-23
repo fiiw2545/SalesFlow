@@ -3,7 +3,7 @@ import axios from "axios";
 import { getActiveOrganizationId } from "../features/organizations/stores/organization.store";
 
 const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL,
+  baseURL: window.SALESFLOW_CONFIG.API_BASE_URL,
   withCredentials: true,
   timeout: 10000,
   headers: {
