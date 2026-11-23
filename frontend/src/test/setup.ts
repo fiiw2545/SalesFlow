@@ -5,6 +5,10 @@ import * as matchers from "@testing-library/jest-dom/matchers";
 
 expect.extend(matchers);
 
+window.SALESFLOW_CONFIG = {
+  API_BASE_URL: "http://localhost:8000",
+};
+
 afterEach(() => {
   cleanup();
 });
