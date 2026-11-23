@@ -9,7 +9,12 @@ load_dotenv(ENV_FILE)
 
 APP_ENV = os.getenv("APP_ENV", "development").strip().lower()
 
-if APP_ENV not in {"development", "testing", "production"}:
+if APP_ENV not in {
+    "development",
+    "testing",
+    "staging",
+    "production",
+}:
     raise RuntimeError(
         f"Invalid APP_ENV: {APP_ENV}"
     )
@@ -62,7 +67,7 @@ is_test_database = (
     or database.endswith("_test")
 )
 
-if APP_ENV == "production":
+if APP_ENV in {"staging", "production"}:
     frontend_url = FRONTEND_URL.strip()
 
     if not frontend_url:
@@ -108,10 +113,12 @@ if APP_ENV == "production":
             "with a public hostname."
         ) from None
 
+
 if APP_ENV != "testing" and is_test_database:
     raise RuntimeError(
         f"{APP_ENV} environment cannot use a test database."
     )
+
 if APP_ENV == "testing":
     if not (
         namespace.endswith("_test")
