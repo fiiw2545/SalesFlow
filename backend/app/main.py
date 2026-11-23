@@ -67,7 +67,7 @@ app.include_router(files_router)
 app.include_router(line_router)
 app.include_router(line_webhook_router)
 
-if APP_ENV != "production":
+if APP_ENV in {"development", "testing"}:
 
     @app.get("/db-version", tags=["Database"])
     async def get_db_version(
